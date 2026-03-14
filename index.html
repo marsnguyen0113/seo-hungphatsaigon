@@ -7,80 +7,322 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; }
+    </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-8">
-    <div id="app" class="max-w-5xl mx-auto">
+<body class="p-4 md:p-8 text-gray-800">
+    <div id="app" class="max-w-7xl mx-auto">
         
-        <h1 class="text-2xl md:text-3xl font-bold mb-6 text-gray-800">Dashboard Phân Tích Sitemap & Nội Dung</h1>
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Dashboard Phân Tích Sitemap & Nội Dung</h1>
+            <p class="text-gray-500">Dữ liệu trực tiếp từ website nội thất Hưng Phát Sài Gòn</p>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-                <h3 class="text-gray-500 text-sm font-semibold mb-1">Tổng URL</h3>
-                <p class="text-3xl font-bold">{{ stats.total }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Tổng URL</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.tongUrl }}</p>
+                    <p class="text-green-600 text-sm mt-2 font-medium"><i class="fa-solid fa-arrow-up mr-1"></i> 100% đã index</p>
+                </div>
+                <div class="bg-orange-100 text-orange-500 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-link"></i>
+                </div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-                <h3 class="text-gray-500 text-sm font-semibold mb-1">Đã Index</h3>
-                <p class="text-3xl font-bold">{{ stats.indexed }}</p>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Danh mục chính</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.danhMuc }}</p>
+                    <p class="text-blue-500 text-sm mt-2 font-medium"><i class="fa-solid fa-tags mr-1"></i> Phân loại đầy đủ</p>
+                </div>
+                <div class="bg-blue-100 text-blue-500 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-folder"></i>
+                </div>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
-                <h3 class="text-gray-500 text-sm font-semibold mb-1">Cần Cập Nhật (>12 tháng)</h3>
-                <p class="text-3xl font-bold text-red-600">{{ stats.needsUpdate }}</p>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Nội dung mới (30 ngày)</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.baiMoi }}</p>
+                    <p class="text-green-600 text-sm mt-2 font-medium"><i class="fa-solid fa-percent mr-1"></i> 0.0% tổng nội dung</p>
+                </div>
+                <div class="bg-green-100 text-green-500 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-400 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Cần cập nhật</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.canCapNhat }}</p>
+                    <p class="text-orange-500 text-sm mt-2 font-medium"><i class="fa-solid fa-calendar-xmark mr-1"></i> >12 tháng chưa cập nhật</p>
+                </div>
+                <div class="bg-orange-100 text-orange-400 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-semibold mb-6 text-gray-700">Phân Bố Trạng Thái Nội Dung</h2>
-            <div class="w-full max-w-md mx-auto">
-                <canvas id="myChart"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-chart-pie text-orange-500 mr-2"></i> Top 10 Chủ Đề Theo Số Lượng Nội Dung</h2>
+                <div class="w-full flex justify-center">
+                    <div style="width: 80%;">
+                        <canvas id="topicChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-chart-bar text-blue-500 mr-2"></i> Phân Bố Trạng Thái Nội Dung</h2>
+                <div class="w-full">
+                    <canvas id="statusChart"></canvas>
+                </div>
             </div>
         </div>
 
     </div>
-<script>
+
+    <script>
         const { createApp, ref, onMounted } = Vue;
 
         createApp({
             setup() {
-                // Biến chứa dữ liệu
+                // Biến lưu trữ số liệu
                 const stats = ref({
-                    total: "...",
-                    indexed: "...",
-                    needsUpdate: "...",
+                    tongUrl: 436,
+                    danhMuc: 7,
                     baiMoi: 0,
-                    canXemXet: 0,
-                    loiThoi: 0
+                    canCapNhat: 54
                 });
 
-                // Đường link Google Apps Script của bạn
-                const API_URL = "https://script.google.com/macros/s/AKfycbzKhoTpKJOSZXPh4TvHQIR7dJeFxRBEXbLItB8e_fETlTo1YzwmOvhVwONDkwVn1-skmA/exec";
+                // ĐIỀN LINK WEB APP CỦA BẠN VÀO ĐÂY
+                const API_URL = "<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Phân Tích SEO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-gray-800">
+    <div id="app" class="max-w-7xl mx-auto">
+        
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Dashboard Phân Tích Sitemap & Nội Dung</h1>
+            <p class="text-gray-500">Dữ liệu trực tiếp từ website nội thất Hưng Phát Sài Gòn</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Tổng URL</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.tongUrl }}</p>
+                    <p class="text-green-600 text-sm mt-2 font-medium"><i class="fa-solid fa-arrow-up mr-1"></i> 100% đã index</p>
+                </div>
+                <div class="bg-orange-100 text-orange-500 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-link"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Danh mục chính</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.danhMuc }}</p>
+                    <p class="text-blue-500 text-sm mt-2 font-medium"><i class="fa-solid fa-tags mr-1"></i> Phân loại đầy đủ</p>
+                </div>
+                <div class="bg-blue-100 text-blue-500 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-folder"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Nội dung mới (30 ngày)</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.baiMoi }}</p>
+                    <p class="text-green-600 text-sm mt-2 font-medium"><i class="fa-solid fa-percent mr-1"></i> 0.0% tổng nội dung</p>
+                </div>
+                <div class="bg-green-100 text-green-500 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-400 flex justify-between items-center">
+                <div>
+                    <h3 class="text-gray-500 text-sm font-medium mb-1">Cần cập nhật</h3>
+                    <p class="text-4xl font-bold text-gray-800">{{ stats.canCapNhat }}</p>
+                    <p class="text-orange-500 text-sm mt-2 font-medium"><i class="fa-solid fa-calendar-xmark mr-1"></i> >12 tháng chưa cập nhật</p>
+                </div>
+                <div class="bg-orange-100 text-orange-400 w-14 h-14 rounded-full flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-chart-pie text-orange-500 mr-2"></i> Top 10 Chủ Đề Theo Số Lượng Nội Dung</h2>
+                <div class="w-full flex justify-center">
+                    <div style="width: 80%;">
+                        <canvas id="topicChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm">
+                <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-chart-bar text-blue-500 mr-2"></i> Phân Bố Trạng Thái Nội Dung</h2>
+                <div class="w-full">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // Biến lưu trữ số liệu
+                const stats = ref({
+                    tongUrl: 436,
+                    danhMuc: 7,
+                    baiMoi: 0,
+                    canCapNhat: 54
+                });
+
+                // ĐIỀN LINK WEB APP CỦA BẠN VÀO ĐÂY
+                const API_URL = "ĐIỀN_LINK_GOOGLE_APPS_SCRIPT_CỦA_BẠN_VÀO_ĐÂY";
 
                 onMounted(async () => {
+                    // Cố gắng gọi API, nếu lỗi thì vẫn hiển thị biểu đồ mẫu để giữ giao diện đẹp
                     try {
-                        // Gọi dữ liệu từ Google Sheets
                         const response = await fetch(API_URL);
                         const data = await response.json();
-
-                        // Cập nhật các con số
-                        stats.value.total = data.total;
-                        stats.value.indexed = data.indexed;
-                        stats.value.needsUpdate = data.needsUpdate;
-
-                        // Vẽ biểu đồ với dữ liệu thật
-                        const ctx = document.getElementById('myChart');
-                        new Chart(ctx, {
-                            type: 'doughnut',
-                            data: {
-                                labels: ['Bài Mới', 'Cần Xem Xét', 'Lỗi Thời (>12 tháng)'],
-                                datasets: [{
-                                    data: [data.baiMoi, data.canXemXet, data.loiThoi],
-                                    backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
-                                    hoverOffset: 4
-                                }]
-                            }
-                        });
+                        
+                        // Cập nhật số liệu từ Google Sheets (nếu bạn đã tạo đúng Key trong Sheets)
+                        if(data.tongUrl) stats.value.tongUrl = data.tongUrl;
+                        if(data.danhMuc) stats.value.danhMuc = data.danhMuc;
+                        if(data.baiMoi) stats.value.baiMoi = data.baiMoi;
+                        if(data.canCapNhat) stats.value.canCapNhat = data.canCapNhat;
                     } catch (error) {
-                        console.error("Lỗi khi tải dữ liệu:", error);
+                        console.log("Đang dùng dữ liệu mẫu vì chưa kết nối được API: ", error);
                     }
+
+                    // --- Vẽ Biểu Đồ Tròn (Doughnut) ---
+                    const ctxTopic = document.getElementById('topicChart');
+                    new Chart(ctxTopic, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Sofa', 'Giường', 'Bàn Ăn', 'Tủ Quần Áo', 'Bàn Trà', 'Khác'],
+                            datasets: [{
+                                data: [150, 80, 60, 45, 30, 71],
+                                backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#facc15', '#ef4444', '#8b5cf6'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            cutout: '65%', // Làm lõm ở giữa giống mẫu
+                            plugins: {
+                                legend: { position: 'right' } // Đẩy chú thích sang phải
+                            }
+                        }
+                    });
+
+                    // --- Vẽ Biểu Đồ Cột (Bar) ---
+                    const ctxStatus = document.getElementById('statusChart');
+                    new Chart(ctxStatus, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Cần cập nhật (>12 tháng)', 'Lỗi thời (>24 tháng)', 'Tốt'],
+                            datasets: [{
+                                label: 'Số lượng bài',
+                                data: [380, 50, 6],
+                                backgroundColor: ['#f59e0b', '#ef4444', '#10b981'],
+                                borderRadius: 4 // Bo góc cột
+                            }]
+                        },
+                        options: {
+                            plugins: { legend: { display: false } }, // Tắt chú thích trên đầu
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                });
+
+                return { stats }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>";
+
+                onMounted(async () => {
+                    // Cố gắng gọi API, nếu lỗi thì vẫn hiển thị biểu đồ mẫu để giữ giao diện đẹp
+                    try {
+                        const response = await fetch(API_URL);
+                        const data = await response.json();
+                        
+                        // Cập nhật số liệu từ Google Sheets (nếu bạn đã tạo đúng Key trong Sheets)
+                        if(data.tongUrl) stats.value.tongUrl = data.tongUrl;
+                        if(data.danhMuc) stats.value.danhMuc = data.danhMuc;
+                        if(data.baiMoi) stats.value.baiMoi = data.baiMoi;
+                        if(data.canCapNhat) stats.value.canCapNhat = data.canCapNhat;
+                    } catch (error) {
+                        console.log("Đang dùng dữ liệu mẫu vì chưa kết nối được API: ", error);
+                    }
+
+                    // --- Vẽ Biểu Đồ Tròn (Doughnut) ---
+                    const ctxTopic = document.getElementById('topicChart');
+                    new Chart(ctxTopic, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Sofa', 'Giường', 'Bàn Ăn', 'Tủ Quần Áo', 'Bàn Trà', 'Khác'],
+                            datasets: [{
+                                data: [150, 80, 60, 45, 30, 71],
+                                backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#facc15', '#ef4444', '#8b5cf6'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            cutout: '65%', // Làm lõm ở giữa giống mẫu
+                            plugins: {
+                                legend: { position: 'right' } // Đẩy chú thích sang phải
+                            }
+                        }
+                    });
+
+                    // --- Vẽ Biểu Đồ Cột (Bar) ---
+                    const ctxStatus = document.getElementById('statusChart');
+                    new Chart(ctxStatus, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Cần cập nhật (>12 tháng)', 'Lỗi thời (>24 tháng)', 'Tốt'],
+                            datasets: [{
+                                label: 'Số lượng bài',
+                                data: [380, 50, 6],
+                                backgroundColor: ['#f59e0b', '#ef4444', '#10b981'],
+                                borderRadius: 4 // Bo góc cột
+                            }]
+                        },
+                        options: {
+                            plugins: { legend: { display: false } }, // Tắt chú thích trên đầu
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
                 });
 
                 return { stats }
