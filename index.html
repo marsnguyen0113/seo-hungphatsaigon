@@ -11,8 +11,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .brand-gradient { background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); }
-        .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-        .expandable-content.expanded { max-height: 2000px; }
+        .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
+        .expandable-content.expanded { max-height: 5000px; }
         .rotate-icon { transition: transform 0.3s ease; }
         .rotate-icon.rotated { transform: rotate(90deg); }
     </style>
@@ -33,6 +33,15 @@
                         <a href="#consultant" class="text-orange-400 font-semibold">Team SEO Hưng Phát</a>
                     </p>
                 </div>
+                <div class="mt-4 lg:mt-0 flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <span class="text-sm">Dữ liệu trực tiếp</span>
+                    </div>
+                    <a href="https://hungphatsaigon.vn" target="_blank" class="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-external-link-alt mr-2"></i>Xem Website
+                    </a>
+                </div>
             </div>
         </div>
     </header>
@@ -40,245 +49,425 @@
     <main class="max-w-7xl mx-auto px-4 py-8">
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500 flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Tổng URL</p>
-                    <p class="text-3xl font-bold text-gray-800" id="totalUrls">--</p>
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Tổng URL (Blog)</p>
+                        <p class="text-3xl font-bold text-gray-800" id="totalUrls">--</p>
+                    </div>
+                    <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl"><i class="fas fa-link"></i></div>
                 </div>
-                <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl"><i class="fas fa-link"></i></div>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500 flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Danh mục chính</p>
-                    <p class="text-3xl font-bold text-gray-800" id="totalCategories">--</p>
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Danh mục Blog</p>
+                        <p class="text-3xl font-bold text-gray-800" id="totalCategories">--</p>
+                    </div>
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl"><i class="fas fa-folder"></i></div>
                 </div>
-                <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl"><i class="fas fa-folder"></i></div>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500 flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Nội dung mới</p>
-                    <p class="text-3xl font-bold text-gray-800" id="freshContent">--</p>
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Nội dung mới (30 ngày)</p>
+                        <p class="text-3xl font-bold text-gray-800" id="freshContent">--</p>
+                    </div>
+                    <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl"><i class="fas fa-check-circle"></i></div>
                 </div>
-                <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl"><i class="fas fa-check-circle"></i></div>
+                <p class="text-green-600 text-sm mt-2" id="freshPercent">--% tổng nội dung</p>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500 flex items-center justify-between">
-                <div>
-                    <p class="text-gray-500 text-sm font-medium">Cần cập nhật</p>
-                    <p class="text-3xl font-bold text-gray-800" id="outdatedContent">--</p>
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Cần cập nhật</p>
+                        <p class="text-3xl font-bold text-gray-800" id="outdatedContent">--</p>
+                    </div>
+                    <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-2xl"><i class="fas fa-exclamation-triangle"></i></div>
                 </div>
-                <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-2xl"><i class="fas fa-exclamation-triangle"></i></div>
+                <p class="text-red-600 text-sm mt-2"><i class="fas fa-calendar-times mr-1"></i>>12 tháng chưa cập nhật</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-chart-pie text-orange-600 mr-3"></i>Top Chủ Đề Theo Số Lượng</h2>
+                <div class="flex flex-col lg:flex-row items-center justify-center gap-6">
+                    <div class="w-64 h-64"><canvas id="topicChart"></canvas></div>
+                    <div id="topicLegend" class="text-sm space-y-2"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-chart-bar text-blue-600 mr-3"></i>Phân Bố Trạng Thái Nội Dung</h2>
+                <div class="h-64"><canvas id="statusChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-calendar-alt text-green-600 mr-3"></i>Lịch Sử Cập Nhật (12 tháng)</h2>
+                <div class="h-64"><canvas id="timelineChart"></canvas></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-layer-group text-purple-600 mr-3"></i>Phân Tích Theo Danh Mục</h2>
+                <div class="h-64"><canvas id="categoryBarChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-4"><i class="fas fa-heartbeat text-red-600 mr-3"></i>Điểm Sức Khỏe Content</h2>
+                <div class="flex items-center justify-center">
+                    <div class="relative w-40 h-40">
+                        <canvas id="healthScore"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center">
+                                <span id="healthScoreValue" class="text-4xl font-bold text-gray-800">--</span><span class="text-lg text-gray-500">/100</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-600">Nội dung tốt:</span><span id="healthFresh" class="font-semibold text-green-600">--</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Cần xem xét:</span><span id="healthStale" class="font-semibold text-yellow-600">--</span></div>
+                    <div class="flex justify-between"><span class="text-gray-600">Lỗi thời:</span><span id="healthOutdated" class="font-semibold text-red-600">--</span></div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-4"><i class="fas fa-exclamation-circle text-yellow-500 mr-3"></i>Top 10 URL Cần Ưu Tiên Cập Nhật</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-yellow-50 border-b border-yellow-200">
+                                <th class="px-3 py-2 text-left font-semibold text-yellow-800">#</th>
+                                <th class="px-3 py-2 text-left font-semibold text-yellow-800">URL Bài Viết</th>
+                                <th class="px-3 py-2 text-center font-semibold text-yellow-800">Cập nhật lần cuối</th>
+                                <th class="px-3 py-2 text-center font-semibold text-yellow-800">Tình trạng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="priorityUrlsTable">
+                            <tr><td colspan="4" class="text-center py-4 text-gray-500">Đang phân tích dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center">
-                    <i class="fas fa-table text-orange-600 mr-3"></i>
-                    Phân Tích Chi Tiết Theo Danh Mục
-                </h2>
-                
-                <div class="mt-4 lg:mt-0 flex flex-wrap items-center gap-3">
-                    <select id="mainCategoryFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500">
-                        <option value="">Tất cả danh mục chính</option>
-                    </select>
-                    <select id="statusFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="fresh">Mới cập nhật</option>
-                        <option value="recent">Gần đây</option>
-                        <option value="stale">Cần xem xét</option>
-                        <option value="outdated">Lỗi thời</option>
-                    </select>
-                    <input type="text" id="searchInput" placeholder="Tìm kiếm URL..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 w-48">
-                    <button id="resetFilters" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors">
-                        <i class="fas fa-redo mr-1"></i>Đặt lại
-                    </button>
-                </div>
-            </div>
-            
+            <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-table text-orange-600 mr-3"></i>Phân Tích Chi Tiết Theo Danh Mục</h2>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="bg-orange-50 border-b-2 border-orange-200">
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">STT</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">URL Bài Viết</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Danh Mục</th>
-                            <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ngày Cập Nhật</th>
-                            <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">Trạng Thái</th>
+                        <tr class="bg-orange-100 border-b-2 border-orange-300">
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-orange-800">Danh Mục Chính</th>
+                            <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">Tổng số URL</th>
+                            <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">Tỷ lệ</th>
+                            <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">Hành động</th>
                         </tr>
                     </thead>
-                    <tbody id="urlTableBody">
-                        <tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Đang tải dữ liệu từ Sheets...</td></tr>
+                    <tbody id="categoryAccordionBody">
+                        <tr><td colspan="4" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div id="consultant" class="bg-white rounded-xl shadow-xl overflow-hidden mb-8">
-            <div class="brand-gradient p-6">
-                <h2 class="text-2xl font-bold text-white flex items-center">
-                    <i class="fas fa-users-cog mr-3 text-orange-400"></i>
-                    Đơn Vị Thực Hiện Phân Tích
-                </h2>
-            </div>
-            <div class="p-6">
-                <div class="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
-                    <div class="lg:w-1/3 text-center">
-                        <div class="w-40 h-40 mx-auto rounded-full bg-orange-100 flex items-center justify-center border-4 border-orange-500 shadow-lg mb-4">
-                            <i class="fas fa-couch text-6xl text-orange-500"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-800">Team In-house SEO</h3>
-                        <p class="text-orange-600 font-medium text-lg">Nội Thất Hưng Phát Sài Gòn</p>
-                    </div>
-                    <div class="lg:w-2/3">
-                        <div class="mb-6">
-                            <h4 class="text-lg font-bold text-gray-800 mb-3 flex items-center"><i class="fas fa-bullseye text-gray-600 mr-2"></i>Mục Tiêu Chiến Lược</h4>
-                            <p class="text-gray-600 leading-relaxed">
-                                Đảm bảo hệ thống nội dung website luôn được cập nhật, tối ưu hóa chuẩn SEO và thân thiện với người dùng. Dashboard này được xây dựng nhằm mục đích theo dõi tự động tình trạng Index, chất lượng Content và phát hiện sớm các URL lỗi thời cần làm mới.
-                            </p>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div class="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <i class="fas fa-check-circle text-green-500 mr-3"></i><span class="text-gray-700">Kiểm soát Content Gap</span>
-                            </div>
-                            <div class="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <i class="fas fa-check-circle text-green-500 mr-3"></i><span class="text-gray-700">Tối ưu Cấu trúc Internal Link</span>
-                            </div>
-                            <div class="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <i class="fas fa-check-circle text-green-500 mr-3"></i><span class="text-gray-700">Audit Nội dung định kỳ</span>
-                            </div>
-                            <div class="flex items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                <i class="fas fa-check-circle text-green-500 mr-3"></i><span class="text-gray-700">Ứng dụng Automation Report</span>
-                            </div>
-                        </div>
-                    </div>
+        <div class="bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl shadow-lg p-6 mb-8 text-white">
+            <h2 class="text-xl font-bold flex items-center mb-4"><i class="fas fa-lightbulb mr-3"></i>Đề Xuất Hành Động</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="flex items-center mb-2"><i class="fas fa-sync-alt text-yellow-300 mr-2"></i><span class="font-semibold">Cập nhật nội dung</span></div>
+                    <p class="text-sm text-white/80">Có <span id="recommendUpdate" class="font-bold text-yellow-300">0</span> bài viết đang rơi vào trạng thái lỗi thời cần được xem xét lại content.</p>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="flex items-center mb-2"><i class="fas fa-link text-blue-300 mr-2"></i><span class="font-semibold">Internal Linking</span></div>
+                    <p class="text-sm text-white/80">Xây dựng liên kết nội bộ chéo giữa các bài viết cũ và bài viết mới để chia sẻ dòng chảy sức mạnh (link juice).</p>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="flex items-center mb-2"><i class="fas fa-image text-pink-300 mr-2"></i><span class="font-semibold">Tối ưu Media</span></div>
+                    <p class="text-sm text-white/80">Bổ sung hình ảnh thực tế sản phẩm Hưng Phát Sài Gòn, alt text và video vào các bài viết blog cũ để tăng tương tác.</p>
                 </div>
             </div>
         </div>
 
+        <div id="consultant" class="bg-white rounded-xl shadow-xl overflow-hidden mb-8">
+            <div class="brand-gradient p-6">
+                <h2 class="text-2xl font-bold text-white flex items-center"><i class="fas fa-users-cog mr-3 text-orange-400"></i>Đơn Vị Quản Trị</h2>
+            </div>
+            <div class="p-6 flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+                <div class="lg:w-1/3 text-center">
+                    <div class="w-32 h-32 mx-auto rounded-full bg-orange-100 flex items-center justify-center border-4 border-orange-500 shadow-lg mb-4">
+                        <i class="fas fa-couch text-5xl text-orange-500"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Team In-house SEO</h3>
+                    <p class="text-orange-600 font-medium">Nội Thất Hưng Phát Sài Gòn</p>
+                </div>
+                <div class="lg:w-2/3 text-gray-600">
+                    <p class="mb-4">Hệ thống báo cáo tự động hóa dành riêng cho khối Content/SEO. Mục tiêu nhằm đảm bảo 100% bài viết blog kiến thức nội thất được index tốt, nội dung luôn được làm mới để đáp ứng ý định tìm kiếm của khách hàng và tiêu chuẩn khắt khe của Google.</p>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <footer class="brand-gradient text-white py-6">
-        <div class="max-w-7xl mx-auto px-4 text-center md:text-left flex flex-col md:flex-row justify-between items-center">
-            <p class="text-gray-300"><i class="fas fa-copyright mr-2"></i>2026 Hệ thống quản trị bởi <span class="text-orange-400 font-semibold">Nội Thất Hưng Phát Sài Gòn</span></p>
-            <a href="https://hungphatsaigon.vn" target="_blank" class="text-gray-300 hover:text-white mt-4 md:mt-0 transition"><i class="fas fa-globe mr-2"></i>hungphatsaigon.vn</a>
-        </div>
-    </footer>
-
     <script>
-        // --- 1. ĐIỀN LINK GOOGLE APPS SCRIPT VÀO ĐÂY ---
+        // 1. ĐIỀN LINK GOOGLE APPS SCRIPT VÀO ĐÂY
         const API_URL = "https://script.google.com/macros/s/AKfycbzKhoTpKJOSZXPh4TvHQIR7dJeFxRBEXbLItB8e_fETlTo1YzwmOvhVwONDkwVn1-skmA/exec";
 
         document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN');
-        
-        let globalDetailsData = []; // Biến lưu toàn bộ danh sách URL để làm bộ lọc
+        let globalDetails = [];
+        let charts = {};
 
         async function loadData() {
             try {
                 const response = await fetch(API_URL);
                 const data = await response.json();
-
-                // 1. Cập nhật Thẻ Tổng Quan
+                
                 const tq = data.tongQuan;
-                document.getElementById('totalUrls').textContent = tq.tongUrl || '0';
-                document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
-                document.getElementById('freshContent').textContent = tq.baiMoi || '0';
-                document.getElementById('outdatedContent').textContent = tq.canCapNhat || '0';
+                globalDetails = data.chiTiet || [];
 
-                // 2. Lưu dữ liệu chi tiết URL để render bảng
-                globalDetailsData = data.chiTiet || [];
+                // Render Thẻ Thống Kê
+                const total = parseInt(tq.tongUrl) || 0;
+                const fresh = parseInt(tq.baiMoi) || 0;
+                const outdated = parseInt(tq.canCapNhat) || 0;
                 
-                // Khởi tạo các tùy chọn (Options) cho Bộ lọc
-                initFilters();
-                
-                // Vẽ bảng lần đầu
-                renderTable();
+                document.getElementById('totalUrls').textContent = total;
+                document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
+                document.getElementById('freshContent').textContent = fresh;
+                document.getElementById('outdatedContent').textContent = outdated;
+                document.getElementById('recommendUpdate').textContent = outdated;
+
+                if(total > 0) {
+                    document.getElementById('freshPercent').innerHTML = `<i class="fas fa-percentage mr-1"></i> ${((fresh / total) * 100).toFixed(1)}% tổng nội dung`;
+                }
+
+                renderAllCharts(total, fresh, outdated);
+                renderTop10Priority();
+                renderCategoryAccordion();
 
             } catch (error) {
                 console.error('Lỗi tải dữ liệu:', error);
-                document.getElementById('urlTableBody').innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Lỗi kết nối đến Google Sheets.</td></tr>';
             }
         }
 
-        // Tạo các option cho dropdown Danh Mục Chính dựa trên dữ liệu thực tế
-        function initFilters() {
-            const mainCategories = [...new Set(globalDetailsData.map(item => item.DanhMucChinh).filter(Boolean))];
-            const filterSelect = document.getElementById('mainCategoryFilter');
+        // HÀM VẼ TẤT CẢ BIỂU ĐỒ
+        function renderAllCharts(total, fresh, outdated) {
+            // Chuẩn bị dữ liệu từ globalDetails
+            const catCounts = {};
+            const monthCounts = {};
+            const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
             
-            mainCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat;
-                option.textContent = cat;
-                filterSelect.appendChild(option);
+            // Khởi tạo 12 tháng gần nhất cho Timeline
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                monthCounts[d.toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })] = 0;
+            }
+
+            globalDetails.forEach(item => {
+                // Đếm Danh mục
+                const cat = item.DanhMucChinh || 'Khác';
+                catCounts[cat] = (catCounts[cat] || 0) + 1;
+
+                // Đếm Trạng thái
+                const status = (item.TrangThai || 'outdated').toLowerCase();
+                if(statusCounts[status] !== undefined) statusCounts[status]++;
+
+                // Đếm Timeline tháng
+                if(item.NgayCapNhat) {
+                    // Cố gắng parse ngày (Đề phòng định dạng ngày VN)
+                    let d = new Date(item.NgayCapNhat);
+                    if(isNaN(d.getTime())) {
+                        const parts = item.NgayCapNhat.split('/');
+                        if(parts.length === 3) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    }
+                    if(!isNaN(d.getTime())) {
+                        const mKey = d.toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' });
+                        if(monthCounts[mKey] !== undefined) monthCounts[mKey]++;
+                    }
+                }
+            });
+
+            const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+
+            // 1. Biểu đồ Tròn (Chủ đề)
+            const top5Cats = sortedCats.slice(0, 5);
+            const doughnutColors = ['#F97316', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+            document.getElementById('topicLegend').innerHTML = top5Cats.map((c, i) => `
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${doughnutColors[i]}"></span><span class="text-gray-700">${c[0]} (${c[1]})</span></div>
+            `).join('');
+            
+            charts.topic = new Chart(document.getElementById('topicChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: top5Cats.map(c => c[0]), datasets: [{ data: top5Cats.map(c => c[1]), backgroundColor: doughnutColors, borderWidth: 2 }] },
+                options: { cutout: '60%', plugins: { legend: { display: false } } }
+            });
+
+            // 2. Biểu đồ Cột (Trạng thái)
+            charts.status = new Chart(document.getElementById('statusChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Mới (<30 ngày)', 'Gần đây (30-90)', 'Cần xem xét (90-365)', 'Lỗi thời (>365)'],
+                    datasets: [{ data: [statusCounts.fresh, statusCounts.recent, statusCounts.stale, statusCounts.outdated], backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'], borderRadius: 6 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+
+            // 3. Biểu đồ Dòng (Timeline - MỚI)
+            charts.timeline = new Chart(document.getElementById('timelineChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: Object.keys(monthCounts),
+                    datasets: [{ label: 'Số bài cập nhật', data: Object.values(monthCounts), borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+
+            // 4. Biểu đồ Cột Ngang (Phân Tích Danh Mục - MỚI)
+            const top8Horizontal = sortedCats.slice(0, 8);
+            charts.brand = new Chart(document.getElementById('categoryBarChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: top8Horizontal.map(c => c[0]),
+                    datasets: [{ data: top8Horizontal.map(c => c[1]), backgroundColor: '#8B5CF6', borderRadius: 4 }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // 5. Điểm Sức Khỏe
+            const score = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
+            document.getElementById('healthScoreValue').textContent = score;
+            document.getElementById('healthFresh').textContent = (statusCounts.fresh + statusCounts.recent) + ' bài';
+            document.getElementById('healthStale').textContent = statusCounts.stale + ' bài';
+            document.getElementById('healthOutdated').textContent = statusCounts.outdated + ' bài';
+
+            charts.health = new Chart(document.getElementById('healthScore').getContext('2d'), {
+                type: 'doughnut',
+                data: { datasets: [{ data: [score, 100 - score], backgroundColor: [score >= 70 ? '#10B981' : score >= 50 ? '#F59E0B' : '#EF4444', '#E5E7EB'], borderWidth: 0 }] },
+                options: { cutout: '75%', plugins: { tooltip: { enabled: false } } }
             });
         }
 
-        // Hàm vẽ lại bảng dựa trên bộ lọc
-        function renderTable() {
-            const tbody = document.getElementById('urlTableBody');
-            tbody.innerHTML = '';
-
-            const mainCatValue = document.getElementById('mainCategoryFilter').value.toLowerCase();
-            const statusValue = document.getElementById('statusFilter').value.toLowerCase();
-            const searchValue = document.getElementById('searchInput').value.toLowerCase();
-
-            // Lọc dữ liệu
-            const filteredData = globalDetailsData.filter(item => {
-                const matchMainCat = mainCatValue === '' || (item.DanhMucChinh && item.DanhMucChinh.toLowerCase() === mainCatValue);
-                const matchStatus = statusValue === '' || (item.TrangThai && item.TrangThai.toLowerCase() === statusValue);
-                const matchSearch = searchValue === '' || (item.URL && item.URL.toLowerCase().includes(searchValue));
-                return matchMainCat && matchStatus && matchSearch;
+        // HÀM RENDER TOP 10 ƯU TIÊN (MỚI)
+        function renderTop10Priority() {
+            // Lọc các bài lỗi thời hoặc trống ngày, sắp xếp cũ nhất lên đầu
+            let priorityList = globalDetails.filter(item => {
+                const s = (item.TrangThai || '').toLowerCase();
+                return s === 'outdated' || s === 'stale';
             });
 
-            if(filteredData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Không tìm thấy dữ liệu phù hợp.</td></tr>';
+            // Sắp xếp: Không có ngày cập nhật ưu tiên số 1, có ngày thì xa nhất lên đầu
+            priorityList.sort((a, b) => {
+                if(!a.NgayCapNhat) return -1;
+                if(!b.NgayCapNhat) return 1;
+                return new Date(a.NgayCapNhat) - new Date(b.NgayCapNhat);
+            });
+
+            const top10 = priorityList.slice(0, 10);
+            const tbody = document.getElementById('priorityUrlsTable');
+            
+            if(top10.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-green-600">Tuyệt vời! Không có URL nào quá cũ cần ưu tiên.</td></tr>';
                 return;
             }
 
-            // Đổ dữ liệu ra bảng HTML
-            filteredData.forEach((item, index) => {
-                // Xác định màu sắc của Badge Trạng thái
-                let statusClass = "bg-gray-100 text-gray-700";
-                let statusText = item.TrangThai || "N/A";
-                
-                if(statusText.toLowerCase() === 'fresh') { statusClass = 'bg-green-100 text-green-700'; statusText = 'Mới cập nhật'; }
-                else if(statusText.toLowerCase() === 'recent') { statusClass = 'bg-blue-100 text-blue-700'; statusText = 'Gần đây'; }
-                else if(statusText.toLowerCase() === 'stale') { statusClass = 'bg-yellow-100 text-yellow-700'; statusText = 'Cần xem xét'; }
-                else if(statusText.toLowerCase() === 'outdated') { statusClass = 'bg-red-100 text-red-700'; statusText = 'Lỗi thời'; }
+            tbody.innerHTML = top10.map((u, i) => {
+                let statusBadge = u.TrangThai === 'outdated' ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Lỗi thời cực kỳ</span>' : '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Cần xem xét</span>';
+                if(!u.NgayCapNhat) statusBadge = '<span class="px-2 py-1 bg-red-200 text-red-800 font-bold rounded text-xs">Không rõ ngày</span>';
 
-                const row = `
-                    <tr class="border-b border-gray-100 hover:bg-orange-50 transition">
-                        <td class="px-4 py-3 text-gray-500">${index + 1}</td>
-                        <td class="px-4 py-3">
-                            <a href="${item.URL}" target="_blank" class="text-blue-600 hover:underline break-all text-sm font-medium">${item.URL}</a>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-600">
-                            <span class="font-semibold text-gray-800">${item.DanhMucChinh || ''}</span>
-                            ${item.DanhMucCon ? `<br><span class="text-xs">↳ ${item.DanhMucCon}</span>` : ''}
-                        </td>
-                        <td class="px-4 py-3 text-center text-sm text-gray-600">${item.NgayCapNhat || ''}</td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="px-2 py-1 rounded-md text-xs font-semibold ${statusClass}">${statusText}</span>
-                        </td>
+                const shortUrl = u.URL ? u.URL.replace('https://hungphatsaigon.vn/', '') : '';
+                return `
+                    <tr class="border-b border-gray-100 hover:bg-yellow-50">
+                        <td class="px-3 py-2 text-gray-500">${i + 1}</td>
+                        <td class="px-3 py-2"><a href="${u.URL}" target="_blank" class="text-blue-600 hover:underline text-xs break-all">${shortUrl}</a></td>
+                        <td class="px-3 py-2 text-center text-gray-600 text-xs">${u.NgayCapNhat ? new Date(u.NgayCapNhat).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                        <td class="px-3 py-2 text-center">${statusBadge}</td>
                     </tr>
                 `;
-                tbody.insertAdjacentHTML('beforeend', row);
+            }).join('');
+        }
+
+        // HÀM RENDER BẢNG GỘP NHÓM (ACCORDION - MỚI)
+        function renderCategoryAccordion() {
+            const tbody = document.getElementById('categoryAccordionBody');
+            
+            // Nhóm dữ liệu theo DanhMucChinh
+            const grouped = {};
+            globalDetails.forEach(item => {
+                const cat = item.DanhMucChinh || 'Khác';
+                if(!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push(item);
+            });
+
+            const totalGlobal = globalDetails.length;
+            tbody.innerHTML = '';
+
+            Object.keys(grouped).forEach((cat, index) => {
+                const urls = grouped[cat];
+                const percent = totalGlobal > 0 ? ((urls.length / totalGlobal) * 100).toFixed(1) : 0;
+                const rowId = 'cat-row-' + index;
+
+                // Dòng chính (Danh mục)
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr class="border-b border-gray-200 hover:bg-orange-50 cursor-pointer" onclick="toggleAccordion('${rowId}')">
+                        <td class="px-4 py-4 font-bold text-gray-800"><i class="fas fa-folder text-orange-400 mr-2"></i>${cat}</td>
+                        <td class="px-4 py-4 text-center font-bold text-orange-600">${urls.length}</td>
+                        <td class="px-4 py-4 text-center">${percent}%</td>
+                        <td class="px-4 py-4 text-center">
+                            <button class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 focus:outline-none">
+                                <i class="fas fa-chevron-right rotate-icon" id="icon-${rowId}"></i> Xem chi tiết
+                            </button>
+                        </td>
+                    </tr>
+                `);
+
+                // Dòng ẩn (Chi tiết URLs)
+                const urlRows = urls.map((u, i) => {
+                    let stClass = "bg-gray-100 text-gray-600";
+                    let stText = u.TrangThai || 'Khác';
+                    if(stText === 'fresh') { stClass = 'bg-green-100 text-green-700'; stText = 'Mới'; }
+                    else if(stText === 'recent') { stClass = 'bg-blue-100 text-blue-700'; stText = 'Gần đây'; }
+                    else if(stText === 'stale') { stClass = 'bg-yellow-100 text-yellow-700'; stText = 'Xem xét'; }
+                    else if(stText === 'outdated') { stClass = 'bg-red-100 text-red-700'; stText = 'Lỗi thời'; }
+
+                    return `
+                        <tr class="border-b border-gray-100 hover:bg-gray-100">
+                            <td class="px-3 py-2 text-xs text-gray-500">${i+1}</td>
+                            <td class="px-3 py-2"><a href="${u.URL}" target="_blank" class="text-blue-500 hover:underline text-xs break-all">${u.URL}</a></td>
+                            <td class="px-3 py-2 text-center text-xs text-gray-600">${u.NgayCapNhat || 'N/A'}</td>
+                            <td class="px-3 py-2 text-center"><span class="px-2 py-1 rounded text-xs ${stClass}">${stText}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr id="${rowId}" class="expandable-content border-b-4 border-orange-500">
+                        <td colspan="4" class="p-0">
+                            <div class="bg-gray-50 px-6 py-4">
+                                <div class="max-h-80 overflow-y-auto rounded shadow-inner border border-gray-200">
+                                    <table class="w-full text-sm bg-white">
+                                        <thead class="bg-gray-100 sticky top-0">
+                                            <tr><th class="px-3 py-2 text-left">#</th><th class="px-3 py-2 text-left">URL Chi Tiết</th><th class="px-3 py-2 text-center">Ngày Cập Nhật</th><th class="px-3 py-2 text-center">Trạng Thái</th></tr>
+                                        </thead>
+                                        <tbody>${urlRows}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `);
             });
         }
 
-        // Lắng nghe sự kiện thay đổi trên các bộ lọc
-        document.getElementById('mainCategoryFilter').addEventListener('change', renderTable);
-        document.getElementById('statusFilter').addEventListener('change', renderTable);
-        document.getElementById('searchInput').addEventListener('input', renderTable);
-        
-        // Nút đặt lại bộ lọc
-        document.getElementById('resetFilters').addEventListener('click', () => {
-            document.getElementById('mainCategoryFilter').value = '';
-            document.getElementById('statusFilter').value = '';
-            document.getElementById('searchInput').value = '';
-            renderTable();
-        });
+        // Hàm hiệu ứng đóng mở bảng
+        function toggleAccordion(rowId) {
+            const row = document.getElementById(rowId);
+            const icon = document.getElementById('icon-' + rowId);
+            row.classList.toggle('expanded');
+            icon.classList.toggle('rotated');
+        }
 
-        // Bắt đầu chạy hệ thống
+        // Khởi động
         loadData();
     </script>
 </body>
