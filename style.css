@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body { 
+    font-family: 'Inter', sans-serif; 
+}
+
+.brand-gradient { 
+    background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); 
+}
+
+.expandable-content { 
+    max-height: 0; 
+    overflow: hidden; 
+    transition: max-height 0.4s ease-in-out; 
+}
+
+.expandable-content.expanded { 
+    max-height: 5000px; 
+}
+
+.rotate-icon { 
+    transition: transform 0.3s ease; 
+}
+
+.rotate-icon.rotated { 
+    transform: rotate(90deg); 
+}
