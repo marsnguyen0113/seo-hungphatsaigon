@@ -1,5 +1,5 @@
 // ĐIỀN LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY (Bước tiếp theo chúng ta sẽ giấu link này đi)
-const API_URL = "ĐIỀN_LINK_CỦA_BẠN_VÀO_ĐÂY";
+const API_URL = "https://api-hungphatsaigon.hoangtuanvpro.workers.dev/";
 
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN');
 let globalDetails = [];
