@@ -36,33 +36,51 @@
         </div>
 
     </div>
-
-    <script>
+<script>
         const { createApp, ref, onMounted } = Vue;
 
         createApp({
             setup() {
-                // Dữ liệu mẫu (Sau này sẽ thay bằng đoạn code lấy từ Google Sheets)
+                // Biến chứa dữ liệu
                 const stats = ref({
-                    total: "1,250",
-                    indexed: "1,200",
-                    needsUpdate: "350"
+                    total: "...",
+                    indexed: "...",
+                    needsUpdate: "...",
+                    baiMoi: 0,
+                    canXemXet: 0,
+                    loiThoi: 0
                 });
 
-                onMounted(() => {
-                    // Lệnh vẽ biểu đồ Tròn (Doughnut)
-                    const ctx = document.getElementById('myChart');
-                    new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Bài Mới', 'Cần Xem Xét', 'Lỗi Thời (>12 tháng)'],
-                            datasets: [{
-                                data: [500, 400, 350], // Số liệu mẫu của biểu đồ
-                                backgroundColor: ['#22c55e', '#eab308', '#ef4444'], // Màu Xanh, Vàng, Đỏ
-                                hoverOffset: 4
-                            }]
-                        }
-                    });
+                // Đường link Google Apps Script của bạn
+                const API_URL = "https://script.google.com/macros/s/AKfycbzKhoTpKJOSZXPh4TvHQIR7dJeFxRBEXbLItB8e_fETlTo1YzwmOvhVwONDkwVn1-skmA/exec";
+
+                onMounted(async () => {
+                    try {
+                        // Gọi dữ liệu từ Google Sheets
+                        const response = await fetch(API_URL);
+                        const data = await response.json();
+
+                        // Cập nhật các con số
+                        stats.value.total = data.total;
+                        stats.value.indexed = data.indexed;
+                        stats.value.needsUpdate = data.needsUpdate;
+
+                        // Vẽ biểu đồ với dữ liệu thật
+                        const ctx = document.getElementById('myChart');
+                        new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Bài Mới', 'Cần Xem Xét', 'Lỗi Thời (>12 tháng)'],
+                                datasets: [{
+                                    data: [data.baiMoi, data.canXemXet, data.loiThoi],
+                                    backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
+                                    hoverOffset: 4
+                                }]
+                            }
+                        });
+                    } catch (error) {
+                        console.error("Lỗi khi tải dữ liệu:", error);
+                    }
                 });
 
                 return { stats }
