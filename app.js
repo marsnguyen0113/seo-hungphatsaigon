@@ -19,21 +19,30 @@ function formatDisplayDate(dateStr) {
     return dateStr;
 }
 
-// 2. HÀM XỬ LÝ NGÀY THÁNG ĐỂ HỆ THỐNG TÍNH TOÁN
 function parseDate(val) {
     if (!val) return null;
-    const str = String(val).trim();
+    let str = String(val).trim();
     if (str.includes('/')) {
-        const parts = str.split('/');
+        let parts = str.split('/');
         if (parts.length === 3) {
-            // Ép về định dạng ISO chuẩn của JS: YYYY-MM-DD
-            const day = parts[0].padStart(2, '0');
-            const month = parts[1].padStart(2, '0');
-            const year = parts[2];
-            return new Date(`${year}-${month}-${day}`);
+            let p0 = parseInt(parts[0]);
+            let p1 = parseInt(parts[1]);
+            let p2 = parseInt(parts[2]);
+
+            // LOGIC THÔNG MINH:
+            // Nếu số đầu > 12 -> Chắc chắn là Ngày (Chuẩn VN/UK: DD/MM/YYYY)
+            // Nếu số giữa > 12 -> Chắc chắn là Ngày (Chuẩn US: MM/DD/YYYY)
+            if (p0 > 12) {
+                return new Date(`${p2}-${p1.padStart ? p1.padStart(2, '0') : p1}-${p0.toString().padStart(2, '0')}`);
+            } else if (p1 > 12) {
+                return new Date(`${p2}-${p0.toString().padStart(2, '0')}-${p1.toString().padStart(2, '0')}`);
+            } else {
+                // Nếu cả 2 đều <= 12, mặc định theo chuẩn UK/VN (Ngày/Tháng/Năm)
+                return new Date(`${p2}-${p1.toString().padStart(2, '0')}-${p0.toString().padStart(2, '0')}`);
+            }
         }
     }
-    const d = new Date(str);
+    let d = new Date(str);
     return isNaN(d.getTime()) ? null : d;
 }
 
