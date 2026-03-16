@@ -5,10 +5,37 @@ document.getElementById('currentDate').textContent = new Date().toLocaleDateStri
 let globalDetails = [];
 let charts = {};
 
-// 1. HÀM CHUẨN HÓA TRẠNG THÁI (Ép kiểu String an toàn)
+// 1. HÀM CHUYỂN ĐỔI M/D/YYYY -> DD/MM/YYYY (Để hiển thị đẹp ra bảng)
+function formatDisplayDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    const parts = String(dateStr).trim().split('/');
+    if (parts.length === 3) {
+        const month = parts[0].padStart(2, '0');
+        const day = parts[1].padStart(2, '0');   
+        const year = parts[2];
+        return `${day}/${month}/${year}`;
+    }
+    return dateStr;
+}
+
+// 2. HÀM XỬ LÝ NGÀY THÁNG ĐỂ HỆ THỐNG TÍNH TOÁN
+function parseDate(val) {
+    if (!val) return null;
+    const str = String(val).trim();
+    if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) {
+            return new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`);
+        }
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// 3. HÀM CHUẨN HÓA TRẠNG THÁI (Ép kiểu String an toàn)
 function getNormalizedStatus(viStatus) {
     if (!viStatus) return 'outdated';
-    const s = String(viStatus).toLowerCase(); // Đảm bảo luôn là chuỗi
+    const s = String(viStatus).toLowerCase();
     if (s.includes('mới')) return 'fresh';
     if (s.includes('gần đây')) return 'recent';
     if (s.includes('cập nhật') || s.includes('xem xét')) return 'stale';
@@ -16,41 +43,23 @@ function getNormalizedStatus(viStatus) {
     return 'outdated';
 }
 
-// 2. HÀM XỬ LÝ NGÀY THÁNG (Ép kiểu String an toàn)
-function parseDate(val) {
-    if (!val) return null;
-    const str = String(val).trim(); // Đảm bảo luôn là chuỗi
-    if (str.includes('/')) {
-        const parts = str.split('/');
-        if (parts.length === 3) {
-            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-        }
-    }
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
-}
-
 async function loadData() {
     try {
         const response = await fetch(API_URL);
         
-        // Bắt lỗi HTTP (CORS, 404, 500...)
         if (!response.ok) {
             throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
         }
         
         const data = await response.json();
         
-        // Bắt lỗi JSON sai cấu trúc
         if (!data || !data.tongQuan) {
             throw new Error("Dữ liệu API trả về không đúng cấu trúc (thiếu block 'tongQuan').");
         }
 
         const tq = data.tongQuan;
-        // Đảm bảo chiTiet luôn là một mảng (Array) để hàm .forEach không bị crash
         globalDetails = Array.isArray(data.chiTiet) ? data.chiTiet : []; 
 
-        // Render Thẻ Thống Kê Tổng Quan
         const total = parseInt(tq.tongUrl) || 0;
         const fresh = parseInt(tq.baiMoi) || 0;
         const outdated = parseInt(tq.canCapNhat) || 0;
@@ -65,7 +74,6 @@ async function loadData() {
             document.getElementById('freshPercent').innerHTML = `<i class="fas fa-percentage mr-1"></i> ${((fresh / total) * 100).toFixed(1)}% tổng nội dung`;
         }
 
-        // Kiểm tra xem có dữ liệu chi tiết không trước khi vẽ biểu đồ
         if (globalDetails.length > 0) {
             renderAllCharts(total, fresh, outdated);
             renderTop10Priority();
@@ -76,12 +84,13 @@ async function loadData() {
 
     } catch (error) {
         console.error('Lỗi hệ thống chi tiết:', error);
+        const errorMsg = `<tr class="bg-red-50"><td colspan="6" class="text-center py-8 text-red-600 font-bold border-red-200 border"><i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>HỆ THỐNG GẶP LỖI:<br><span class="text-sm font-normal">${error.message}</span><br><span class="text-xs text-gray-500 mt-2 block">Vui lòng nhấn F12 -> Mở tab Console để xem chi tiết lỗi.</span></td></tr>`;
         
-        // Hiển thị lỗi thẳng ra màn hình thay vì treo Loading
-        const errorMsg = `<tr class="bg-red-50"><td colspan="4" class="text-center py-8 text-red-600 font-bold border-red-200 border"><i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>HỆ THỐNG GẶP LỖI:<br><span class="text-sm font-normal">${error.message}</span><br><span class="text-xs text-gray-500 mt-2 block">Vui lòng nhấn F12 -> Mở tab Console để xem chi tiết lỗi.</span></td></tr>`;
+        const accordionBody = document.getElementById('categoryAccordionBody');
+        if(accordionBody) accordionBody.innerHTML = errorMsg;
         
-        document.getElementById('categoryAccordionBody').innerHTML = errorMsg;
-        document.getElementById('priorityUrlsTable').innerHTML = errorMsg;
+        const priorityTbody = document.getElementById('priorityUrlsTable');
+        if(priorityTbody) priorityTbody.innerHTML = errorMsg.replace('colspan="6"', 'colspan="4"');
     }
 }
 
@@ -185,149 +194,4 @@ function renderTop10Priority() {
     const tbody = document.getElementById('priorityUrlsTable');
     
     if(top10.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-green-600 font-medium">Tuyệt vời! Không có URL nào quá cũ cần ưu tiên.</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = top10.map((u, i) => {
-        const normStatus = getNormalizedStatus(u.TrangThai);
-        let statusBadge = normStatus === 'outdated' 
-            ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">Lỗi thời cực kỳ</span>' 
-            : '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">Cần xem xét</span>';
-        
-        if(!u.NgayCapNhat) statusBadge = '<span class="px-2 py-1 bg-gray-200 text-gray-800 font-bold rounded text-xs">Không rõ ngày</span>';
-
-        const shortUrl = u.URL ? String(u.URL).replace('https://hungphatsaigon.vn/', '') : 'N/A';
-        return `
-            <tr class="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
-                <td class="px-3 py-2 text-gray-500 font-medium">${i + 1}</td>
-                <td class="px-3 py-2">
-                    <a href="${u.URL || '#'}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline text-xs break-all" title="${u.TieuDe || ''}">${shortUrl}</a>
-                </td>
-                <td class="px-3 py-2 text-center text-gray-600 text-xs font-medium">${u.NgayCapNhat || 'N/A'}</td>
-                <td class="px-3 py-2 text-center">${statusBadge}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// HÀM RENDER BẢNG ACCORDION THEO DANH MỤC (Đã nâng cấp chuẩn theo mẫu Tân Tân)
-function renderCategoryAccordion() {
-    const tbody = document.getElementById('categoryAccordionBody');
-    const grouped = {};
-    
-    // Gom nhóm kết hợp DanhMucChinh + DanhMucCon
-    globalDetails.forEach(item => {
-        const mainCat = item.DanhMucChinh || 'Khác';
-        const subCat = item.DanhMucCon || 'Chung';
-        const groupKey = `${mainCat}___${subCat}`; // Tạo key gộp 2 cấp
-
-        if(!grouped[groupKey]) {
-            grouped[groupKey] = {
-                main: mainCat,
-                sub: subCat,
-                urls: [],
-                latestDate: null
-            };
-        }
-        grouped[groupKey].urls.push(item);
-
-        // Tìm ngày cập nhật mới nhất của nhóm này
-        const d = parseDate(item.NgayCapNhat);
-        if (d) {
-            if (!grouped[groupKey].latestDate || d > grouped[groupKey].latestDate) {
-                grouped[groupKey].latestDate = d;
-            }
-        }
-    });
-
-    const totalGlobal = globalDetails.length;
-    tbody.innerHTML = '';
-
-    // Render từng nhóm ra bảng
-    Object.values(grouped).forEach((group, index) => {
-        const percent = totalGlobal > 0 ? ((group.urls.length / totalGlobal) * 100).toFixed(2) : 0;
-        const rowId = 'cat-row-' + index;
-        
-        // Format ngày cập nhật gần nhất của nhóm
-        const latestDateStr = group.latestDate ? 
-            `${group.latestDate.getDate().toString().padStart(2, '0')}/${(group.latestDate.getMonth() + 1).toString().padStart(2, '0')}/${group.latestDate.getFullYear()}` 
-            : 'N/A';
-
-        let accordionHtml = `
-            <tr class="border-b border-gray-200 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
-                <td class="px-4 py-4 font-bold text-gray-800"><i class="fas fa-folder-open text-orange-400 mr-2"></i>${group.main}</td>
-                <td class="px-4 py-4 text-gray-700 font-medium">${group.sub}</td>
-                <td class="px-4 py-4 text-center font-bold text-orange-600">${group.urls.length}</td>
-                <td class="px-4 py-4 text-center text-gray-600 font-medium">${percent}%</td>
-                <td class="px-4 py-4 text-center text-gray-600 font-medium">${latestDateStr}</td>
-                <td class="px-4 py-4 text-center">
-                    <button class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 focus:outline-none flex items-center justify-center mx-auto gap-2">
-                        <span>Xem chi tiết</span> <i class="fas fa-chevron-right transition-transform duration-200" id="icon-${rowId}"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        const urlRows = group.urls.map((u, i) => {
-            const normStatus = getNormalizedStatus(u.TrangThai);
-            let stClass = "bg-gray-100 text-gray-600";
-            let stText = u.TrangThai || 'Khác';
-            
-            if(normStatus === 'fresh') { stClass = 'bg-green-100 text-green-700'; }
-            else if(normStatus === 'recent') { stClass = 'bg-blue-100 text-blue-700'; }
-            else if(normStatus === 'stale') { stClass = 'bg-yellow-100 text-yellow-700'; }
-            else if(normStatus === 'outdated') { stClass = 'bg-red-100 text-red-700'; }
-
-            return `
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="px-3 py-2 text-xs text-gray-500">${i+1}</td>
-                    <td class="px-3 py-2">
-                        <a href="${u.URL || '#'}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline text-xs break-all" title="${u.TieuDe || ''}">${u.URL || 'N/A'}</a>
-                    </td>
-                    <td class="px-3 py-2 text-center text-xs text-gray-600 font-medium">${formatDisplayDate(u.NgayCapNhat)}</td>
-                    <td class="px-3 py-2 text-center"><span class="px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${stClass}">${stText}</span></td>
-                </tr>
-            `;
-        }).join('');
-
-        accordionHtml += `
-            <tr id="${rowId}" class="hidden border-b-4 border-orange-500 bg-gray-50/50">
-                <td colspan="6" class="p-0">
-                    <div class="px-6 py-4">
-                        <div class="max-h-80 overflow-y-auto rounded shadow-inner border border-gray-200 bg-white">
-                            <table class="w-full text-sm">
-                                <thead class="bg-gray-100 sticky top-0 z-10 shadow-sm">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold w-10">STT</th>
-                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold">URL Chi Tiết</th>
-                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Ngày cập nhật</th>
-                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${urlRows}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML('beforeend', accordionHtml);
-    });
-}
-
-function toggleAccordion(rowId) {
-    const row = document.getElementById(rowId);
-    const icon = document.getElementById('icon-' + rowId);
-    
-    if (row.classList.contains('hidden')) {
-        row.classList.remove('hidden');
-        icon.classList.add('rotate-90');
-    } else {
-        row.classList.add('hidden');
-        icon.classList.remove('rotate-90');
-    }
-}
-
-// Khởi động
-loadData();
+        tbody.innerHTML = '<tr><td colspan="4"
