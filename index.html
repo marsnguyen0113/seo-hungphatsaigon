@@ -7,31 +7,35 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <link rel="stylesheet" href="style.css">
+    <style>
+        .brand-gradient { background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%); }
+        .expandable-content { transition: all 0.3s ease-in-out; }
+        .rotate-90 { transform: rotate(90deg); }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen font-sans text-gray-900">
     
     <header class="brand-gradient text-white shadow-xl">
         <div class="max-w-7xl mx-auto px-4 py-6">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h1 class="text-2xl lg:text-3xl font-bold flex items-center gap-3">
-                        <i class="fas fa-sitemap text-orange-400"></i>
+                        <i class="fas fa-sitemap text-orange-800"></i>
                         Dashboard Phân Tích Sitemap & Nội Dung
                     </h1>
-                    <p class="text-gray-300 mt-2 text-sm lg:text-base">
+                    <p class="text-orange-900/80 mt-2 text-sm lg:text-base font-medium">
                         <i class="fas fa-clock mr-2"></i>Cập nhật: <span id="currentDate">--/--/----</span> | 
-                        <i class="fas fa-user ml-2 mr-2 text-orange-400"></i>Phân tích bởi 
-                        <a href="#consultant" class="text-orange-400 font-semibold">Team SEO Hưng Phát</a>
+                        <i class="fas fa-user ml-2 mr-2"></i>Phân tích bởi 
+                        <span class="font-bold border-b-2 border-orange-800/30">Team SEO Hưng Phát</span>
                     </p>
                 </div>
                 <div class="mt-4 lg:mt-0 flex items-center gap-4">
-                    <div class="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+                    <div class="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/30">
                         <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                        <span class="text-sm">Dữ liệu trực tiếp</span>
+                        <span class="text-sm font-semibold">Dữ liệu trực tiếp</span>
                     </div>
-                    <a href="https://hungphatsaigon.vn" target="_blank" class="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <a href="https://hungphatsaigon.vn" target="_blank" class="bg-white text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all">
                         <i class="fas fa-external-link-alt mr-2"></i>Xem Website
                     </a>
                 </div>
@@ -42,169 +46,210 @@
     <main class="max-w-7xl mx-auto px-4 py-8">
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Tổng URL (Blog)</p>
-                        <p class="text-3xl font-bold text-gray-800" id="totalUrls">--</p>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Tổng URL (Blog)</p>
+                        <p class="text-3xl font-black text-gray-800" id="totalUrls">--</p>
                     </div>
-                    <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-2xl"><i class="fas fa-link"></i></div>
+                    <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-xl"><i class="fas fa-link"></i></div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Danh mục Blog</p>
-                        <p class="text-3xl font-bold text-gray-800" id="totalCategories">--</p>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Danh mục Blog</p>
+                        <p class="text-3xl font-black text-gray-800" id="totalCategories">--</p>
                     </div>
-                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl"><i class="fas fa-folder"></i></div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xl"><i class="fas fa-folder"></i></div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Nội dung mới (30 ngày)</p>
-                        <p class="text-3xl font-bold text-gray-800" id="freshContent">--</p>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Nội dung mới (30 ngày)</p>
+                        <p class="text-3xl font-black text-gray-800" id="freshContent">--</p>
                     </div>
-                    <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl"><i class="fas fa-check-circle"></i></div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl"><i class="fas fa-check-circle"></i></div>
                 </div>
-                <p class="text-green-600 text-sm mt-2" id="freshPercent">--% tổng nội dung</p>
+                <p class="text-green-600 text-xs mt-2 font-bold" id="freshPercent">--% tổng nội dung</p>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Cần cập nhật</p>
-                        <p class="text-3xl font-bold text-gray-800" id="outdatedContent">--</p>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Cần cập nhật</p>
+                        <p class="text-3xl font-black text-gray-800" id="outdatedContent">--</p>
                     </div>
-                    <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-2xl"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 text-xl"><i class="fas fa-exclamation-triangle"></i></div>
                 </div>
-                <p class="text-red-600 text-sm mt-2"><i class="fas fa-calendar-times mr-1"></i>>12 tháng chưa cập nhật</p>
+                <p class="text-red-600 text-xs mt-2 font-medium italic">>12 tháng chưa cập nhật</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-chart-pie text-orange-600 mr-3"></i>Top Chủ Đề Theo Số Lượng</h2>
-                <div class="flex flex-col lg:flex-row items-center justify-center gap-6">
-                    <div class="w-64 h-64"><canvas id="topicChart"></canvas></div>
-                    <div id="topicLegend" class="text-sm space-y-2"></div>
+                <h2 class="text-lg font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-chart-pie text-orange-600 mr-3"></i>Top Chủ Đề Theo Số Lượng</h2>
+                <div class="flex flex-col lg:flex-row items-center justify-center gap-8">
+                    <div class="w-56 h-56"><canvas id="topicChart"></canvas></div>
+                    <div id="topicLegend" class="text-sm space-y-3 font-medium"></div>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-chart-bar text-blue-600 mr-3"></i>Phân Bố Trạng Thái Nội Dung</h2>
+                <h2 class="text-lg font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-chart-bar text-blue-600 mr-3"></i>Phân Bố Trạng Thái Nội Dung</h2>
                 <div class="h-64"><canvas id="statusChart"></canvas></div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-calendar-alt text-green-600 mr-3"></i>Lịch Sử Cập Nhật (12 tháng)</h2>
+                <h2 class="text-lg font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-calendar-alt text-green-600 mr-3"></i>Lịch Sử Cập Nhật (12 tháng)</h2>
                 <div class="h-64"><canvas id="timelineChart"></canvas></div>
             </div>
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-layer-group text-purple-600 mr-3"></i>Phân Tích Theo Danh Mục</h2>
+                <h2 class="text-lg font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-layer-group text-purple-600 mr-3"></i>Phân Tích Theo Danh Mục</h2>
                 <div class="h-64"><canvas id="categoryBarChart"></canvas></div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-4"><i class="fas fa-heartbeat text-red-600 mr-3"></i>Điểm Sức Khỏe Content</h2>
-                <div class="flex items-center justify-center">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center mb-4"><i class="fas fa-heartbeat text-red-600 mr-3"></i>Điểm Sức Khỏe Content</h2>
+                <div class="flex items-center justify-center py-4">
                     <div class="relative w-40 h-40">
                         <canvas id="healthScore"></canvas>
                         <div class="absolute inset-0 flex items-center justify-center">
                             <div class="text-center">
-                                <span id="healthScoreValue" class="text-4xl font-bold text-gray-800">--</span><span class="text-lg text-gray-500">/100</span>
+                                <span id="healthScoreValue" class="text-4xl font-black text-gray-800">--</span><span class="text-lg font-bold text-gray-400">/100</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="mt-4 space-y-2 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-600">Nội dung tốt:</span><span id="healthFresh" class="font-semibold text-green-600">--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-600">Cần xem xét:</span><span id="healthStale" class="font-semibold text-yellow-600">--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-600">Lỗi thời:</span><span id="healthOutdated" class="font-semibold text-red-600">--</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500 font-medium">Nội dung tốt:</span><span id="healthFresh" class="font-bold text-green-600 px-2 py-0.5 bg-green-50 rounded">-- bài</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500 font-medium">Cần xem xét:</span><span id="healthStale" class="font-bold text-yellow-600 px-2 py-0.5 bg-yellow-50 rounded">-- bài</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500 font-medium">Lỗi thời:</span><span id="healthOutdated" class="font-bold text-red-600 px-2 py-0.5 bg-red-50 rounded">-- bài</span></div>
                 </div>
             </div>
             
             <div class="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center mb-4"><i class="fas fa-exclamation-circle text-yellow-500 mr-3"></i>Top 10 URL Cần Ưu Tiên Cập Nhật</h2>
+                <h2 class="text-lg font-bold text-gray-800 flex items-center mb-4"><i class="fas fa-exclamation-circle text-yellow-500 mr-3"></i>Top 10 URL Cần Ưu Tiên Cập Nhật</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="bg-yellow-50 border-b border-yellow-200">
-                                <th class="px-3 py-2 text-left font-semibold text-yellow-800">#</th>
-                                <th class="px-3 py-2 text-left font-semibold text-yellow-800">URL Bài Viết</th>
-                                <th class="px-3 py-2 text-center font-semibold text-yellow-800">Cập nhật lần cuối</th>
-                                <th class="px-3 py-2 text-center font-semibold text-yellow-800">Tình trạng</th>
+                            <tr class="bg-yellow-50 border-b-2 border-yellow-200">
+                                <th class="px-3 py-3 text-left font-bold text-yellow-800">#</th>
+                                <th class="px-3 py-3 text-left font-bold text-yellow-800">URL Bài Viết</th>
+                                <th class="px-3 py-3 text-center font-bold text-yellow-800">Ngày cập nhật</th>
+                                <th class="px-3 py-3 text-center font-bold text-yellow-800">Tình trạng</th>
                             </tr>
                         </thead>
                         <tbody id="priorityUrlsTable">
-                            <tr><td colspan="4" class="text-center py-4 text-gray-500">Đang phân tích dữ liệu...</td></tr>
+                            <tr><td colspan="4" class="text-center py-10 text-gray-400 font-medium"><i class="fas fa-spinner fa-spin mr-2"></i>Đang xử lý dữ liệu ưu tiên...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-800 flex items-center mb-6"><i class="fas fa-table text-orange-600 mr-3"></i>Phân Tích Chi Tiết Theo Danh Mục</h2>
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 overflow-hidden">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">
+                <h2 class="text-xl font-black text-gray-800 flex items-center">
+                    <i class="fas fa-table text-orange-600 mr-3"></i>Phân Tích Chi Tiết Theo Danh Mục
+                </h2>
+                
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="mainCatFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
+                        <option value="">Tất cả danh mục chính</option>
+                    </select>
+                    <select id="subCatFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
+                        <option value="">Tất cả danh mục con</option>
+                    </select>
+                    <select id="statusFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="fresh">Mới</option>
+                        <option value="recent">Gần đây</option>
+                        <option value="stale">Cần xem xét</option>
+                        <option value="outdated">Lỗi thời</option>
+                    </select>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        <input type="text" id="urlSearch" placeholder="Tìm kiếm URL..." class="border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:ring-2 focus:ring-orange-500 outline-none w-40">
+                    </div>
+                    <button id="resetFilterBtn" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                        <i class="fas fa-undo"></i> Đặt lại
+                    </button>
+                </div>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full">
-<thead class="bg-orange-100 border-b-2 border-orange-300">
-    <tr>
-        <th class="px-4 py-3 text-left text-sm font-semibold text-orange-800">Danh Mục Chính</th>
-        <th class="px-4 py-3 text-left text-sm font-semibold text-orange-800">Danh Mục Con</th>
-        <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">Số URL</th>
-        <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">% Tổng</th>
-        <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">Cập nhật gần nhất</th>
-        <th class="px-4 py-3 text-center text-sm font-semibold text-orange-800">Hành động</th>
-    </tr>
-</thead>
+                    <thead class="bg-gray-50 border-b-2 border-gray-200">
+                        <tr>
+                            <th class="px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-widest">Danh Mục Chính</th>
+                            <th class="px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-widest">Danh Mục Con</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">Số URL</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">% Tổng</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">Cập nhật gần nhất</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">Hành động</th>
+                        </tr>
+                    </thead>
                     <tbody id="categoryAccordionBody">
-                        <tr><td colspan="4" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Đang tải dữ liệu...</td></tr>
+                        <tr><td colspan="6" class="text-center py-16 text-gray-400"><i class="fas fa-spinner fa-spin fa-2x mb-3 block"></i>Đang khởi tạo bảng dữ liệu...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="bg-gradient-to-r from-orange-500 to-amber-600 rounded-xl shadow-lg p-6 mb-8 text-white">
-            <h2 class="text-xl font-bold flex items-center mb-4"><i class="fas fa-lightbulb mr-3"></i>Đề Xuất Hành Động</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white/10 rounded-lg p-4">
-                    <div class="flex items-center mb-2"><i class="fas fa-sync-alt text-yellow-300 mr-2"></i><span class="font-semibold">Cập nhật nội dung</span></div>
-                    <p class="text-sm text-white/80">Có <span id="recommendUpdate" class="font-bold text-yellow-300">0</span> bài viết đang rơi vào trạng thái lỗi thời cần được xem xét lại content.</p>
+        <div class="bg-gradient-to-r from-orange-600 to-amber-500 rounded-xl shadow-lg p-8 mb-8 text-white">
+            <h2 class="text-xl font-black flex items-center mb-6 uppercase tracking-wider"><i class="fas fa-lightbulb mr-3 text-yellow-300"></i>Đề Xuất Hành Động SEO</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white/10 rounded-xl p-5 border border-white/20 hover:bg-white/20 transition-all cursor-default">
+                    <div class="flex items-center mb-3"><i class="fas fa-sync-alt text-yellow-300 text-lg mr-3"></i><span class="font-bold text-lg">Cập nhật nội dung</span></div>
+                    <p class="text-sm text-orange-50 leading-relaxed">Có <span id="recommendUpdate" class="font-black text-yellow-300 underline">0</span> bài viết lỗi thời (>12 tháng). Cần ưu tiên làm mới thông tin sản phẩm và giá cả.</p>
                 </div>
-                <div class="bg-white/10 rounded-lg p-4">
-                    <div class="flex items-center mb-2"><i class="fas fa-link text-blue-300 mr-2"></i><span class="font-semibold">Internal Linking</span></div>
-                    <p class="text-sm text-white/80">Xây dựng liên kết nội bộ chéo giữa các bài viết cũ và bài viết mới để chia sẻ dòng chảy sức mạnh (link juice).</p>
+                <div class="bg-white/10 rounded-xl p-5 border border-white/20 hover:bg-white/20 transition-all cursor-default">
+                    <div class="flex items-center mb-3"><i class="fas fa-link text-blue-200 text-lg mr-3"></i><span class="font-bold text-lg">Internal Linking</span></div>
+                    <p class="text-sm text-orange-50 leading-relaxed">Sử dụng AI gợi ý liên kết giữa các bài viết "Cần xem xét" và các bộ sưu tập Sofa mới nhất để tăng sức mạnh URL.</p>
                 </div>
-                <div class="bg-white/10 rounded-lg p-4">
-                    <div class="flex items-center mb-2"><i class="fas fa-image text-pink-300 mr-2"></i><span class="font-semibold">Tối ưu Media</span></div>
-                    <p class="text-sm text-white/80">Bổ sung hình ảnh thực tế sản phẩm Hưng Phát Sài Gòn, alt text và video vào các bài viết blog cũ để tăng tương tác.</p>
+                <div class="bg-white/10 rounded-xl p-5 border border-white/20 hover:bg-white/20 transition-all cursor-default">
+                    <div class="flex items-center mb-3"><i class="fas fa-image text-pink-200 text-lg mr-3"></i><span class="font-bold text-lg">Tối ưu Media</span></div>
+                    <p class="text-sm text-orange-50 leading-relaxed">Nội dung cũ thiếu Video/Hình thực tế. Cần bổ sung Album ảnh showroom Hưng Phát Sài Gòn để tăng tỷ lệ chuyển đổi.</p>
                 </div>
             </div>
         </div>
 
-        <div id="consultant" class="bg-white rounded-xl shadow-xl overflow-hidden mb-8">
+        <div id="consultant" class="bg-white rounded-xl shadow-xl overflow-hidden mb-8 border border-gray-100">
             <div class="brand-gradient p-6">
-                <h2 class="text-2xl font-bold text-white flex items-center"><i class="fas fa-users-cog mr-3 text-orange-400"></i>Đơn Vị Quản Trị</h2>
+                <h2 class="text-xl font-black text-white flex items-center uppercase tracking-widest"><i class="fas fa-users-cog mr-3 text-orange-900/50"></i>Đơn Vị Quản Trị Hệ Thống</h2>
             </div>
-            <div class="p-6 flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+            <div class="p-8 flex flex-col lg:flex-row gap-10 items-center lg:items-start">
                 <div class="lg:w-1/3 text-center">
-                    <div class="w-32 h-32 mx-auto rounded-full bg-orange-100 flex items-center justify-center border-4 border-orange-500 shadow-lg mb-4">
+                    <div class="w-28 h-28 mx-auto rounded-3xl bg-orange-50 flex items-center justify-center border-4 border-orange-500 shadow-inner mb-6 rotate-3 hover:rotate-0 transition-transform">
                         <i class="fas fa-couch text-5xl text-orange-500"></i>
                     </div>
-                    <h3 class="text-2xl font-bold text-gray-800">Team In-house SEO</h3>
-                    <p class="text-orange-600 font-medium">Nội Thất Hưng Phát Sài Gòn</p>
+                    <h3 class="text-xl font-black text-gray-800">Team In-house SEO</h3>
+                    <p class="text-orange-600 font-bold uppercase text-xs tracking-widest mt-1">Nội Thất Hưng Phát Sài Gòn</p>
                 </div>
                 <div class="lg:w-2/3 text-gray-600">
-                    <p class="mb-4">Hệ thống báo cáo tự động hóa dành riêng cho khối Content/SEO. Mục tiêu nhằm đảm bảo 100% bài viết blog kiến thức nội thất được index tốt, nội dung luôn được làm mới để đáp ứng ý định tìm kiếm của khách hàng và tiêu chuẩn khắt khe của Google.</p>
-                    <p class="mb-4">Hỗ trợ kỹ thuật: Mr.Tuấn - 0909.311.086</p>
+                    <p class="mb-4 leading-relaxed font-medium text-lg text-gray-700 italic">"Hệ thống báo cáo tự động hóa dành riêng cho khối Content/SEO. Đảm bảo 100% nội dung kiến thức nội thất luôn đạt chuẩn E-E-A-T và đáp ứng ý định tìm kiếm của khách hàng."</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                        <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <i class="fas fa-headset text-orange-500"></i>
+                            <span class="text-sm font-bold">Hỗ trợ: Mr.Tuấn - 0909.311.086</span>
+                        </div>
+                        <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <i class="fas fa-envelope text-orange-500"></i>
+                            <span class="text-sm font-bold">Email: seo@hungphatsaigon.vn</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <footer class="text-center py-8 text-gray-400 text-xs font-bold uppercase tracking-widest border-t border-gray-100 bg-white">
+        © 2026 Nội Thất Hưng Phát Sài Gòn | Dashboard Version 3.0 Final
+    </footer>
 
     <script src="app.js" defer></script>
 </body>
