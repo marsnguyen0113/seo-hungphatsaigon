@@ -5,20 +5,25 @@ document.getElementById('currentDate').textContent = new Date().toLocaleDateStri
 let globalDetails = [];
 let charts = {};
 
-// 1. HÀM CHUYỂN ĐỔI NGÀY THÁNG ĐỂ HIỂN THỊ (Gốc đã là DD/MM/YYYY)
+/**
+ * 1. HÀM CHUYỂN ĐỔI NGÀY THÁNG ĐỂ HIỂN THỊ (Chuẩn hóa về DD/MM/YYYY)
+ */
 function formatDisplayDate(dateStr) {
     if (!dateStr) return 'N/A';
-    const parts = String(dateStr).trim().split('/');
+    const str = String(dateStr).trim();
+    const parts = str.split('/');
     if (parts.length === 3) {
-        // Gốc là DD/MM/YYYY nên parts[0] là Ngày, parts[1] là Tháng
-        const day = parts[0].padStart(2, '0');   
-        const month = parts[1].padStart(2, '0'); 
-        const year = parts[2];
-        return `${day}/${month}/${year}`;
+        // Xử lý thông minh: Nếu phần đầu > 12 thì đó là Ngày, nếu phần giữa > 12 thì đó là Ngày
+        let d = parts[0], m = parts[1], y = parts[2];
+        if (parseInt(parts[1]) > 12) { [d, m] = [parts[1], parts[0]]; } 
+        return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
     }
     return dateStr;
 }
 
+/**
+ * 2. HÀM XỬ LÝ NGÀY THÁNG ĐỂ HỆ THỐNG TÍNH TOÁN (Smart Parser)
+ */
 function parseDate(val) {
     if (!val) return null;
     let str = String(val).trim();
@@ -28,25 +33,19 @@ function parseDate(val) {
             let p0 = parseInt(parts[0]);
             let p1 = parseInt(parts[1]);
             let p2 = parseInt(parts[2]);
-
-            // LOGIC THÔNG MINH:
-            // Nếu số đầu > 12 -> Chắc chắn là Ngày (Chuẩn VN/UK: DD/MM/YYYY)
-            // Nếu số giữa > 12 -> Chắc chắn là Ngày (Chuẩn US: MM/DD/YYYY)
-            if (p0 > 12) {
-                return new Date(`${p2}-${p1.padStart ? p1.padStart(2, '0') : p1}-${p0.toString().padStart(2, '0')}`);
-            } else if (p1 > 12) {
-                return new Date(`${p2}-${p0.toString().padStart(2, '0')}-${p1.toString().padStart(2, '0')}`);
-            } else {
-                // Nếu cả 2 đều <= 12, mặc định theo chuẩn UK/VN (Ngày/Tháng/Năm)
-                return new Date(`${p2}-${p1.toString().padStart(2, '0')}-${p0.toString().padStart(2, '0')}`);
-            }
+            // Logic nhận diện chuẩn UK/VN vs chuẩn US
+            if (p0 > 12) { return new Date(p2, p1 - 1, p0); } 
+            if (p1 > 12) { return new Date(p2, p0 - 1, p1); }
+            return new Date(p2, p1 - 1, p0); // Mặc định DD/MM
         }
     }
     let d = new Date(str);
     return isNaN(d.getTime()) ? null : d;
 }
 
-// 3. HÀM CHUẨN HÓA TRẠNG THÁI (Ép kiểu String an toàn)
+/**
+ * 3. HÀM CHUẨN HÓA TRẠNG THÁI (Mapping Tiếng Việt -> Logic)
+ */
 function getNormalizedStatus(viStatus) {
     if (!viStatus) return 'outdated';
     const s = String(viStatus).toLowerCase();
@@ -57,76 +56,90 @@ function getNormalizedStatus(viStatus) {
     return 'outdated';
 }
 
+/**
+ * 4. HÀM KHỞI TẠO BỘ LỌC (FILTER MODULE)
+ */
+function initFilters() {
+    const mainSelect = document.getElementById('mainCatFilter');
+    const subSelect = document.getElementById('subCatFilter');
+    if (!mainSelect || !subSelect) return;
+
+    // Lấy danh sách duy nhất
+    const mainCats = [...new Set(globalDetails.map(item => item.DanhMucChinh || 'Khác'))].sort();
+    const subCats = [...new Set(globalDetails.map(item => item.DanhMucCon || 'Chung'))].sort();
+
+    mainSelect.innerHTML = '<option value="">Tất cả danh mục chính</option>' + 
+        mainCats.map(c => `<option value="${c}">${c}</option>`).join('');
+    subSelect.innerHTML = '<option value="">Tất cả danh mục con</option>' + 
+        subCats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    // Lắng nghe sự kiện
+    ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderCategoryAccordion);
+    });
+
+    document.getElementById('resetFilterBtn').onclick = () => {
+        document.getElementById('mainCatFilter').value = '';
+        document.getElementById('subCatFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('urlSearch').value = '';
+        renderCategoryAccordion();
+    };
+}
+
+/**
+ * 5. TẢI DỮ LIỆU TỪ API
+ */
 async function loadData() {
     try {
         const response = await fetch(API_URL);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
         
         const data = await response.json();
-        
-        if (!data || !data.tongQuan) {
-            throw new Error("Dữ liệu API trả về không đúng cấu trúc (thiếu block 'tongQuan').");
-        }
-
         const tq = data.tongQuan;
         globalDetails = Array.isArray(data.chiTiet) ? data.chiTiet : []; 
 
+        // Cập nhật thẻ KPI
         const total = parseInt(tq.tongUrl) || 0;
-        const fresh = parseInt(tq.baiMoi) || 0;
-        const outdated = parseInt(tq.canCapNhat) || 0;
-        
         document.getElementById('totalUrls').textContent = total;
         document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
-        document.getElementById('freshContent').textContent = fresh;
-        document.getElementById('outdatedContent').textContent = outdated + (parseInt(tq.loiThoi) || 0);
-        document.getElementById('recommendUpdate').textContent = parseInt(tq.loiThoi) || 0;
+        document.getElementById('freshContent').textContent = tq.baiMoi || '0';
+        document.getElementById('outdatedContent').textContent = (parseInt(tq.canCapNhat) || 0) + (parseInt(tq.loiThoi) || 0);
+        document.getElementById('recommendUpdate').textContent = tq.loiThoi || '0';
 
         if(total > 0) {
-            document.getElementById('freshPercent').innerHTML = `<i class="fas fa-percentage mr-1"></i> ${((fresh / total) * 100).toFixed(1)}% tổng nội dung`;
+            document.getElementById('freshPercent').innerHTML = `<i class="fas fa-percentage mr-1"></i> ${((parseInt(tq.baiMoi) / total) * 100).toFixed(1)}% tổng nội dung`;
         }
 
-        if (globalDetails.length > 0) {
-            renderAllCharts(total, fresh, outdated);
-            renderTop10Priority();
-            renderCategoryAccordion();
-        } else {
-            throw new Error("Mảng 'chiTiet' đang rỗng, không có dữ liệu để vẽ bảng.");
-        }
+        renderAllCharts(total, parseInt(tq.baiMoi), parseInt(tq.canCapNhat));
+        renderTop10Priority();
+        renderCategoryAccordion();
+        initFilters(); // Kích hoạt bộ lọc
 
     } catch (error) {
-        console.error('Lỗi hệ thống chi tiết:', error);
-        const errorMsg = `<tr class="bg-red-50"><td colspan="6" class="text-center py-8 text-red-600 font-bold border-red-200 border"><i class="fas fa-exclamation-triangle text-2xl mb-2 block"></i>HỆ THỐNG GẶP LỖI:<br><span class="text-sm font-normal">${error.message}</span><br><span class="text-xs text-gray-500 mt-2 block">Vui lòng nhấn F12 -> Mở tab Console để xem chi tiết lỗi.</span></td></tr>`;
-        
-        const accordionBody = document.getElementById('categoryAccordionBody');
-        if(accordionBody) accordionBody.innerHTML = errorMsg;
-        
-        const priorityTbody = document.getElementById('priorityUrlsTable');
-        if(priorityTbody) priorityTbody.innerHTML = errorMsg.replace('colspan="6"', 'colspan="4"');
+        console.error('Lỗi hệ thống:', error);
+        const errorMsg = `<tr class="bg-red-50"><td colspan="6" class="text-center py-8 text-red-600 font-bold border-red-200 border">LỖI: ${error.message}</td></tr>`;
+        document.getElementById('categoryAccordionBody').innerHTML = errorMsg;
     }
 }
 
-// HÀM VẼ TẤT CẢ BIỂU ĐỒ
+/**
+ * 6. VẼ BIỂU ĐỒ (CHART.JS)
+ */
 function renderAllCharts(total, fresh, outdated) {
     const catCounts = {};
     const monthCounts = {};
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
     
     for (let i = 11; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
+        const d = new Date(); d.setMonth(d.getMonth() - i);
         monthCounts[d.toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })] = 0;
     }
 
     globalDetails.forEach(item => {
         const cat = item.DanhMucChinh || 'Khác';
         catCounts[cat] = (catCounts[cat] || 0) + 1;
-
-        const normStatus = getNormalizedStatus(item.TrangThai);
-        statusCounts[normStatus]++;
-
+        statusCounts[getNormalizedStatus(item.TrangThai)]++;
         const d = parseDate(item.NgayCapNhat);
         if (d) {
             const mKey = d.toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' });
@@ -136,220 +149,123 @@ function renderAllCharts(total, fresh, outdated) {
 
     const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
 
-    const top5Cats = sortedCats.slice(0, 5);
-    const doughnutColors = ['#F97316', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
-    document.getElementById('topicLegend').innerHTML = top5Cats.map((c, i) => `
-        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${doughnutColors[i]}"></span><span class="text-gray-700">${c[0]} (${c[1]})</span></div>
-    `).join('');
-    
-    charts.topic = new Chart(document.getElementById('topicChart').getContext('2d'), {
-        type: 'doughnut',
-        data: { labels: top5Cats.map(c => c[0]), datasets: [{ data: top5Cats.map(c => c[1]), backgroundColor: doughnutColors, borderWidth: 2 }] },
-        options: { cutout: '60%', plugins: { legend: { display: false } } }
-    });
+    // Topic Chart
+    const top5 = sortedCats.slice(0, 5);
+    const colors = ['#F97316', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+    document.getElementById('topicLegend').innerHTML = top5.map((c, i) => `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${colors[i]}"></span><span>${c[0]} (${c[1]})</span></div>`).join('');
+    charts.topic = new Chart(document.getElementById('topicChart'), { type: 'doughnut', data: { labels: top5.map(c => c[0]), datasets: [{ data: top5.map(c => c[1]), backgroundColor: colors }] }, options: { cutout: '70%', plugins: { legend: { display: false } } } });
 
-    charts.status = new Chart(document.getElementById('statusChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: ['Mới (<30 ngày)', 'Gần đây (30-90)', 'Cần xem xét (90-365)', 'Lỗi thời (>365)'],
-            datasets: [{ data: [statusCounts.fresh, statusCounts.recent, statusCounts.stale, statusCounts.outdated], backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'], borderRadius: 6 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-    });
+    // Status Chart
+    charts.status = new Chart(document.getElementById('statusChart'), { type: 'bar', data: { labels: ['Mới', 'Gần đây', 'Xem xét', 'Lỗi thời'], datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'], borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
 
-    charts.timeline = new Chart(document.getElementById('timelineChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: Object.keys(monthCounts),
-            datasets: [{ label: 'Số bài cập nhật', data: Object.values(monthCounts), borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-    });
+    // Timeline Chart
+    charts.timeline = new Chart(document.getElementById('timelineChart'), { type: 'line', data: { labels: Object.keys(monthCounts), datasets: [{ label: 'Cập nhật', data: Object.values(monthCounts), borderColor: '#10B981', tension: 0.4, fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
 
-    const top8Horizontal = sortedCats.slice(0, 8);
-    charts.brand = new Chart(document.getElementById('categoryBarChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: top8Horizontal.map(c => c[0]),
-            datasets: [{ data: top8Horizontal.map(c => c[1]), backgroundColor: '#8B5CF6', borderRadius: 4 }]
-        },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-    });
+    // Category Bar
+    const top8 = sortedCats.slice(0, 8);
+    charts.brand = new Chart(document.getElementById('categoryBarChart'), { type: 'bar', data: { labels: top8.map(c => c[0]), datasets: [{ data: top8.map(c => c[1]), backgroundColor: '#8B5CF6', borderRadius: 5 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
 
+    // Health Score
     const score = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
     document.getElementById('healthScoreValue').textContent = score;
     document.getElementById('healthFresh').textContent = (statusCounts.fresh + statusCounts.recent) + ' bài';
     document.getElementById('healthStale').textContent = statusCounts.stale + ' bài';
     document.getElementById('healthOutdated').textContent = statusCounts.outdated + ' bài';
-
-    charts.health = new Chart(document.getElementById('healthScore').getContext('2d'), {
-        type: 'doughnut',
-        data: { datasets: [{ data: [score, 100 - score], backgroundColor: [score >= 70 ? '#10B981' : score >= 50 ? '#F59E0B' : '#EF4444', '#E5E7EB'], borderWidth: 0 }] },
-        options: { cutout: '75%', plugins: { tooltip: { enabled: false } } }
-    });
+    charts.health = new Chart(document.getElementById('healthScore'), { type: 'doughnut', data: { datasets: [{ data: [score, 100 - score], backgroundColor: [score >= 70 ? '#10B981' : '#EF4444', '#E5E7EB'] }] }, options: { cutout: '80%', plugins: { tooltip: { enabled: false } } } });
 }
 
-// HÀM RENDER TOP 10 ƯU TIÊN
+/**
+ * 7. RENDER TOP 10 ƯU TIÊN
+ */
 function renderTop10Priority() {
-    let priorityList = globalDetails.filter(item => {
-        const s = getNormalizedStatus(item.TrangThai);
-        return s === 'outdated' || s === 'stale';
-    });
-
-    priorityList.sort((a, b) => {
-        const dateA = parseDate(a.NgayCapNhat);
-        const dateB = parseDate(b.NgayCapNhat);
-        if(!dateA) return -1;
-        if(!dateB) return 1;
-        return dateA - dateB; // Cũ nhất lên đầu
-    });
-
-    const top10 = priorityList.slice(0, 10);
-    const tbody = document.getElementById('priorityUrlsTable');
+    let list = globalDetails.filter(i => ['outdated', 'stale'].includes(getNormalizedStatus(i.TrangThai)));
+    list.sort((a, b) => (parseDate(a.NgayCapNhat) || 0) - (parseDate(b.NgayCapNhat) || 0));
     
-    if(top10.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-green-600 font-medium">Tuyệt vời! Không có URL nào quá cũ cần ưu tiên.</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = top10.map((u, i) => {
-        const normStatus = getNormalizedStatus(u.TrangThai);
-        let statusBadge = normStatus === 'outdated' 
-            ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">Lỗi thời cực kỳ</span>' 
-            : '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">Cần xem xét</span>';
-        
-        if(!u.NgayCapNhat) statusBadge = '<span class="px-2 py-1 bg-gray-200 text-gray-800 font-bold rounded text-xs">Không rõ ngày</span>';
-
-        const shortUrl = u.URL ? String(u.URL).replace('https://hungphatsaigon.vn/', '') : 'N/A';
-        return `
-            <tr class="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
-                <td class="px-3 py-2 text-gray-500 font-medium">${i + 1}</td>
-                <td class="px-3 py-2">
-                    <a href="${u.URL || '#'}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline text-xs break-all" title="${u.TieuDe || ''}">${shortUrl}</a>
-                </td>
-                <td class="px-3 py-2 text-center text-gray-600 text-xs font-medium">${formatDisplayDate(u.NgayCapNhat)}</td>
-                <td class="px-3 py-2 text-center">${statusBadge}</td>
-            </tr>
-        `;
-    }).join('');
+    document.getElementById('priorityUrlsTable').innerHTML = list.slice(0, 10).map((u, i) => `
+        <tr class="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+            <td class="px-3 py-3 text-gray-400 font-bold">${i + 1}</td>
+            <td class="px-3 py-3"><a href="${u.URL}" target="_blank" class="text-blue-600 hover:underline text-xs break-all">${String(u.URL).replace('https://hungphatsaigon.vn/', '')}</a></td>
+            <td class="px-3 py-3 text-center text-gray-500 font-bold text-xs">${formatDisplayDate(u.NgayCapNhat)}</td>
+            <td class="px-3 py-3 text-center"><span class="px-2 py-1 ${getNormalizedStatus(u.TrangThai) === 'outdated' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} rounded text-[10px] font-black uppercase">${u.TrangThai}</span></td>
+        </tr>
+    `).join('');
 }
 
-// HÀM RENDER BẢNG ACCORDION THEO DANH MỤC CẤP 2
+/**
+ * 8. RENDER BẢNG ACCORDION & LOGIC LỌC
+ */
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
-    const grouped = {};
-    
-    // Gom nhóm kết hợp DanhMucChinh + DanhMucCon
-    globalDetails.forEach(item => {
-        const mainCat = item.DanhMucChinh || 'Khác';
-        const subCat = item.DanhMucCon || 'Chung';
-        const groupKey = `${mainCat}___${subCat}`; 
+    const mainVal = document.getElementById('mainCatFilter').value;
+    const subVal = document.getElementById('subCatFilter').value;
+    const statusVal = document.getElementById('statusFilter').value;
+    const searchVal = document.getElementById('urlSearch').value.toLowerCase();
 
-        if(!grouped[groupKey]) {
-            grouped[groupKey] = {
-                main: mainCat,
-                sub: subCat,
-                urls: [],
-                latestDate: null
-            };
-        }
-        grouped[groupKey].urls.push(item);
-
-        const d = parseDate(item.NgayCapNhat);
-        if (d) {
-            if (!grouped[groupKey].latestDate || d > grouped[groupKey].latestDate) {
-                grouped[groupKey].latestDate = d;
-            }
-        }
+    const filtered = globalDetails.filter(item => {
+        const mMain = !mainVal || item.DanhMucChinh === mainVal;
+        const mSub = !subVal || item.DanhMucCon === subVal;
+        const mStatus = !statusVal || getNormalizedStatus(item.TrangThai) === statusVal;
+        const mSearch = !searchVal || (item.URL && String(item.URL).toLowerCase().includes(searchVal));
+        return mMain && mSub && mStatus && mSearch;
     });
 
-    const totalGlobal = globalDetails.length;
-    tbody.innerHTML = '';
+    const grouped = {};
+    filtered.forEach(item => {
+        const key = `${item.DanhMucChinh || 'Khác'}___${item.DanhMucCon || 'Chung'}`;
+        if(!grouped[key]) grouped[key] = { main: item.DanhMucChinh || 'Khác', sub: item.DanhMucCon || 'Chung', urls: [], latest: null };
+        grouped[key].urls.push(item);
+        const d = parseDate(item.NgayCapNhat);
+        if (d && (!grouped[key].latest || d > grouped[key].latest)) grouped[key].latest = d;
+    });
 
-    // Lặp để render
+    tbody.innerHTML = filtered.length === 0 ? '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-bold">Không tìm thấy dữ liệu khớp bộ lọc</td></tr>' : '';
+
     Object.keys(grouped).forEach((key, index) => {
-        const group = grouped[key];
-        const percent = totalGlobal > 0 ? ((group.urls.length / totalGlobal) * 100).toFixed(2) : 0;
+        const g = grouped[key];
         const rowId = 'cat-row-' + index;
-        
-        const latestDateStr = group.latestDate ? 
-            `${group.latestDate.getDate().toString().padStart(2, '0')}/${(group.latestDate.getMonth() + 1).toString().padStart(2, '0')}/${group.latestDate.getFullYear()}` 
-            : 'N/A';
+        const latestStr = g.latest ? g.latest.toLocaleDateString('vi-VN') : 'N/A';
 
-        let accordionHtml = `
-            <tr class="border-b border-gray-200 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
-                <td class="px-4 py-4 font-bold text-gray-800"><i class="fas fa-folder-open text-orange-400 mr-2"></i>${group.main}</td>
-                <td class="px-4 py-4 text-gray-700 font-medium">${group.sub}</td>
-                <td class="px-4 py-4 text-center font-bold text-orange-600">${group.urls.length}</td>
-                <td class="px-4 py-4 text-center text-gray-600 font-medium">${percent}%</td>
-                <td class="px-4 py-4 text-center text-gray-600 font-medium">${latestDateStr}</td>
+        let html = `
+            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
+                <td class="px-4 py-4 font-bold text-gray-800 text-sm"><i class="fas fa-folder-open text-orange-400 mr-2"></i>${g.main}</td>
+                <td class="px-4 py-4 text-gray-500 font-bold text-xs">${g.sub}</td>
+                <td class="px-4 py-4 text-center font-black text-orange-600">${g.urls.length}</td>
+                <td class="px-4 py-4 text-center text-gray-400 font-bold text-xs">${((g.urls.length / globalDetails.length) * 100).toFixed(1)}%</td>
+                <td class="px-4 py-4 text-center text-gray-500 font-bold text-xs">${latestStr}</td>
                 <td class="px-4 py-4 text-center">
-                    <button class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 focus:outline-none flex items-center justify-center mx-auto gap-2">
-                        <span>Xem chi tiết</span> <i class="fas fa-chevron-right transition-transform duration-200" id="icon-${rowId}"></i>
+                    <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-2 mx-auto">
+                        Chi tiết <i class="fas fa-chevron-right transition-transform" id="icon-${rowId}"></i>
                     </button>
                 </td>
             </tr>
-        `;
-
-        const urlRows = group.urls.map((u, i) => {
-            const normStatus = getNormalizedStatus(u.TrangThai);
-            let stClass = "bg-gray-100 text-gray-600";
-            let stText = u.TrangThai || 'Khác';
-            
-            if(normStatus === 'fresh') { stClass = 'bg-green-100 text-green-700'; }
-            else if(normStatus === 'recent') { stClass = 'bg-blue-100 text-blue-700'; }
-            else if(normStatus === 'stale') { stClass = 'bg-yellow-100 text-yellow-700'; }
-            else if(normStatus === 'outdated') { stClass = 'bg-red-100 text-red-700'; }
-
-            return `
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="px-3 py-2 text-xs text-gray-500">${i+1}</td>
-                    <td class="px-3 py-2">
-                        <a href="${u.URL || '#'}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline text-xs break-all" title="${u.TieuDe || ''}">${u.URL || 'N/A'}</a>
-                    </td>
-                    <td class="px-3 py-2 text-center text-xs text-gray-600 font-medium">${formatDisplayDate(u.NgayCapNhat)}</td>
-                    <td class="px-3 py-2 text-center"><span class="px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${stClass}">${stText}</span></td>
-                </tr>
-            `;
-        }).join('');
-
-        accordionHtml += `
-            <tr id="${rowId}" class="hidden border-b-4 border-orange-500 bg-gray-50/50">
-                <td colspan="6" class="p-0">
-                    <div class="px-6 py-4">
-                        <div class="max-h-80 overflow-y-auto rounded shadow-inner border border-gray-200 bg-white">
-                            <table class="w-full text-sm">
-                                <thead class="bg-gray-100 sticky top-0 z-10 shadow-sm">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold w-10">STT</th>
-                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold">URL Chi Tiết</th>
-                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Ngày cập nhật</th>
-                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${urlRows}</tbody>
-                            </table>
-                        </div>
+            <tr id="${rowId}" class="hidden bg-gray-50/50 border-b-2 border-orange-200">
+                <td colspan="6" class="p-4">
+                    <div class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-inner">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-100 sticky top-0 font-bold text-[10px] text-gray-400 uppercase tracking-widest">
+                                <tr><th class="p-2">STT</th><th class="p-2">URL</th><th class="p-2 text-center">Cập nhật</th><th class="p-2 text-center">Trạng thái</th></tr>
+                            </thead>
+                            <tbody>
+                                ${g.urls.map((u, i) => {
+                                    const n = getNormalizedStatus(u.TrangThai);
+                                    const c = n === 'fresh' ? 'text-green-600 bg-green-50' : n === 'recent' ? 'text-blue-600 bg-blue-50' : n === 'stale' ? 'text-yellow-600 bg-yellow-50' : 'text-red-600 bg-red-50';
+                                    return `<tr class="border-b border-gray-50"><td class="p-2 text-xs font-bold text-gray-300">${i+1}</td><td class="p-2"><a href="${u.URL}" target="_blank" class="text-blue-500 text-[10px] break-all hover:underline">${u.URL}</a></td><td class="p-2 text-center text-[10px] font-bold text-gray-500">${formatDisplayDate(u.NgayCapNhat)}</td><td class="p-2 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${c}">${u.TrangThai}</span></td></tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML('beforeend', accordionHtml);
+            </tr>`;
+        tbody.insertAdjacentHTML('beforeend', html);
     });
 }
 
-function toggleAccordion(rowId) {
-    const row = document.getElementById(rowId);
-    const icon = document.getElementById('icon-' + rowId);
-    
-    if (row.classList.contains('hidden')) {
-        row.classList.remove('hidden');
-        icon.classList.add('rotate-90');
-    } else {
-        row.classList.add('hidden');
-        icon.classList.remove('rotate-90');
-    }
+function toggleAccordion(id) {
+    const r = document.getElementById(id);
+    const i = document.getElementById('icon-' + id);
+    if(r.classList.contains('hidden')) { r.classList.remove('hidden'); i.classList.add('rotate-90'); }
+    else { r.classList.add('hidden'); i.classList.remove('rotate-90'); }
 }
 
-// Khởi động
+// KHỞI CHẠY
 loadData();
