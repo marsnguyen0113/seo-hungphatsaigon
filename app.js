@@ -211,39 +211,65 @@ function renderTop10Priority() {
     }).join('');
 }
 
-// HÀM RENDER BẢNG ACCORDION THEO DANH MỤC
+// HÀM RENDER BẢNG ACCORDION THEO DANH MỤC (Đã nâng cấp chuẩn theo mẫu Tân Tân)
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
     const grouped = {};
     
+    // Gom nhóm kết hợp DanhMucChinh + DanhMucCon
     globalDetails.forEach(item => {
-        const cat = item.DanhMucChinh || 'Khác';
-        if(!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(item);
+        const mainCat = item.DanhMucChinh || 'Khác';
+        const subCat = item.DanhMucCon || 'Chung';
+        const groupKey = `${mainCat}___${subCat}`; // Tạo key gộp 2 cấp
+
+        if(!grouped[groupKey]) {
+            grouped[groupKey] = {
+                main: mainCat,
+                sub: subCat,
+                urls: [],
+                latestDate: null
+            };
+        }
+        grouped[groupKey].urls.push(item);
+
+        // Tìm ngày cập nhật mới nhất của nhóm này
+        const d = parseDate(item.NgayCapNhat);
+        if (d) {
+            if (!grouped[groupKey].latestDate || d > grouped[groupKey].latestDate) {
+                grouped[groupKey].latestDate = d;
+            }
+        }
     });
 
     const totalGlobal = globalDetails.length;
     tbody.innerHTML = '';
 
-    Object.keys(grouped).forEach((cat, index) => {
-        const urls = grouped[cat];
-        const percent = totalGlobal > 0 ? ((urls.length / totalGlobal) * 100).toFixed(1) : 0;
+    // Render từng nhóm ra bảng
+    Object.values(grouped).forEach((group, index) => {
+        const percent = totalGlobal > 0 ? ((group.urls.length / totalGlobal) * 100).toFixed(2) : 0;
         const rowId = 'cat-row-' + index;
+        
+        // Format ngày cập nhật gần nhất của nhóm
+        const latestDateStr = group.latestDate ? 
+            `${group.latestDate.getDate().toString().padStart(2, '0')}/${(group.latestDate.getMonth() + 1).toString().padStart(2, '0')}/${group.latestDate.getFullYear()}` 
+            : 'N/A';
 
         let accordionHtml = `
             <tr class="border-b border-gray-200 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
-                <td class="px-4 py-4 font-bold text-gray-800"><i class="fas fa-folder-open text-orange-400 mr-2"></i>${cat}</td>
-                <td class="px-4 py-4 text-center font-bold text-orange-600">${urls.length}</td>
+                <td class="px-4 py-4 font-bold text-gray-800"><i class="fas fa-folder-open text-orange-400 mr-2"></i>${group.main}</td>
+                <td class="px-4 py-4 text-gray-700 font-medium">${group.sub}</td>
+                <td class="px-4 py-4 text-center font-bold text-orange-600">${group.urls.length}</td>
                 <td class="px-4 py-4 text-center text-gray-600 font-medium">${percent}%</td>
+                <td class="px-4 py-4 text-center text-gray-600 font-medium">${latestDateStr}</td>
                 <td class="px-4 py-4 text-center">
-                    <button class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 focus:outline-none">
-                        <i class="fas fa-chevron-right transition-transform duration-200" id="icon-${rowId}"></i> Xem chi tiết
+                    <button class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 focus:outline-none flex items-center justify-center mx-auto gap-2">
+                        <span>Xem chi tiết</span> <i class="fas fa-chevron-right transition-transform duration-200" id="icon-${rowId}"></i>
                     </button>
                 </td>
             </tr>
         `;
 
-        const urlRows = urls.map((u, i) => {
+        const urlRows = group.urls.map((u, i) => {
             const normStatus = getNormalizedStatus(u.TrangThai);
             let stClass = "bg-gray-100 text-gray-600";
             let stText = u.TrangThai || 'Khác';
@@ -253,16 +279,13 @@ function renderCategoryAccordion() {
             else if(normStatus === 'stale') { stClass = 'bg-yellow-100 text-yellow-700'; }
             else if(normStatus === 'outdated') { stClass = 'bg-red-100 text-red-700'; }
 
-            const subCatTag = u.DanhMucCon ? `<span class="inline-block mt-1 text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">${u.DanhMucCon}</span>` : '';
-
             return `
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
                     <td class="px-3 py-2 text-xs text-gray-500">${i+1}</td>
                     <td class="px-3 py-2">
                         <a href="${u.URL || '#'}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline text-xs break-all" title="${u.TieuDe || ''}">${u.URL || 'N/A'}</a>
-                        <br>${subCatTag}
                     </td>
-                    <td class="px-3 py-2 text-center text-xs text-gray-600 font-medium">${u.NgayCapNhat || 'N/A'}</td>
+                    <td class="px-3 py-2 text-center text-xs text-gray-600 font-medium">${formatDisplayDate(u.NgayCapNhat)}</td>
                     <td class="px-3 py-2 text-center"><span class="px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${stClass}">${stText}</span></td>
                 </tr>
             `;
@@ -270,16 +293,16 @@ function renderCategoryAccordion() {
 
         accordionHtml += `
             <tr id="${rowId}" class="hidden border-b-4 border-orange-500 bg-gray-50/50">
-                <td colspan="4" class="p-0">
+                <td colspan="6" class="p-0">
                     <div class="px-6 py-4">
                         <div class="max-h-80 overflow-y-auto rounded shadow-inner border border-gray-200 bg-white">
                             <table class="w-full text-sm">
                                 <thead class="bg-gray-100 sticky top-0 z-10 shadow-sm">
                                     <tr>
-                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold w-10">#</th>
-                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold">URL Chi Tiết & Danh Mục Con</th>
-                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Cập Nhật</th>
-                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Trạng Thái</th>
+                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold w-10">STT</th>
+                                        <th class="px-3 py-2 text-left text-gray-600 font-semibold">URL Chi Tiết</th>
+                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Ngày cập nhật</th>
+                                        <th class="px-3 py-2 text-center text-gray-600 font-semibold w-28">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody>${urlRows}</tbody>
