@@ -232,6 +232,7 @@ function renderCategoryAccordion() {
     const statusVal = document.getElementById('statusFilter').value;
     const searchVal = document.getElementById('urlSearch').value.toLowerCase();
 
+    // Thực hiện lọc dữ liệu
     const filtered = globalDetails.filter(item => {
         const mMain = !mainVal || item.DanhMucChinh === mainVal;
         const mSub = !subVal || item.DanhMucCon === subVal;
@@ -240,6 +241,7 @@ function renderCategoryAccordion() {
         return mMain && mSub && mStatus && mSearch;
     });
 
+    // Gom nhóm dữ liệu sau khi lọc
     const grouped = {};
     filtered.forEach(item => {
         const key = `${item.DanhMucChinh || 'Khác'}___${item.DanhMucCon || 'Chung'}`;
@@ -249,19 +251,29 @@ function renderCategoryAccordion() {
         if (d && (!grouped[key].latest || d > grouped[key].latest)) grouped[key].latest = d;
     });
 
-    tbody.innerHTML = filtered.length === 0 ? '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-bold">Không tìm thấy dữ liệu khớp bộ lọc</td></tr>' : '';
+    tbody.innerHTML = filtered.length === 0 ? '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-bold">Không tìm thấy dữ liệu phù hợp với yêu cầu lọc.</td></tr>' : '';
 
     Object.keys(grouped).forEach((key, index) => {
         const g = grouped[key];
         const rowId = 'cat-row-' + index;
-        const latestStr = g.latest ? g.latest.toLocaleDateString('vi-VN') : 'N/A';
+        
+        // ĐÃ FIX: Ép định dạng ngày tháng chuẩn DD/MM/YYYY thay vì dùng toLocaleDateString
+        let latestStr = 'N/A';
+        if (g.latest) {
+            const day = g.latest.getDate().toString().padStart(2, '0');
+            const month = (g.latest.getMonth() + 1).toString().padStart(2, '0');
+            const year = g.latest.getFullYear();
+            latestStr = `${day}/${month}/${year}`;
+        }
+
+        const percent = ((g.urls.length / globalDetails.length) * 100).toFixed(1);
 
         let html = `
             <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
-                <td class="px-4 py-4 font-bold text-gray-800 text-sm"><i class="fas fa-folder-open text-orange-400 mr-2"></i>${g.main}</td>
+                <td class="px-4 py-4 font-bold text-gray-800 text-sm"><i class="fas fa-folder text-orange-400 mr-2"></i>${g.main}</td>
                 <td class="px-4 py-4 text-gray-500 font-bold text-xs">${g.sub}</td>
                 <td class="px-4 py-4 text-center font-black text-orange-600">${g.urls.length}</td>
-                <td class="px-4 py-4 text-center text-gray-400 font-bold text-xs">${((g.urls.length / globalDetails.length) * 100).toFixed(1)}%</td>
+                <td class="px-4 py-4 text-center text-gray-400 font-bold text-xs">${percent}%</td>
                 <td class="px-4 py-4 text-center text-gray-500 font-bold text-xs">${latestStr}</td>
                 <td class="px-4 py-4 text-center">
                     <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-2 mx-auto">
@@ -269,18 +281,26 @@ function renderCategoryAccordion() {
                     </button>
                 </td>
             </tr>
-            <tr id="${rowId}" class="hidden bg-gray-50/50 border-b-2 border-orange-200">
+            <tr id="${rowId}" class="hidden bg-gray-50/30 border-b-2 border-orange-100">
                 <td colspan="6" class="p-4">
-                    <div class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-inner">
+                    <div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
                         <table class="w-full text-left">
-                            <thead class="bg-gray-100 sticky top-0 font-bold text-[10px] text-gray-400 uppercase tracking-widest">
-                                <tr><th class="p-2">STT</th><th class="p-2">URL</th><th class="p-2 text-center">Cập nhật</th><th class="p-2 text-center">Trạng thái</th></tr>
+                            <thead class="bg-gray-50 font-bold text-[10px] text-gray-400 uppercase tracking-widest sticky top-0">
+                                <tr><th class="p-3">STT</th><th class="p-3">URL Chi Tiết</th><th class="p-3 text-center">Cập nhật</th><th class="p-3 text-center">Trạng thái</th><th class="p-3 text-center">Kỹ thuật</th></tr>
                             </thead>
                             <tbody>
                                 ${g.urls.map((u, i) => {
                                     const n = getNormalizedStatus(u.TrangThai);
-                                    const c = n === 'fresh' ? 'text-green-600 bg-green-50' : n === 'recent' ? 'text-blue-600 bg-blue-50' : n === 'stale' ? 'text-yellow-600 bg-yellow-50' : 'text-red-600 bg-red-50';
-                                    return `<tr class="border-b border-gray-50"><td class="p-2 text-xs font-bold text-gray-300">${i+1}</td><td class="p-2"><a href="${u.URL}" target="_blank" class="text-blue-500 text-[10px] break-all hover:underline">${u.URL}</a></td><td class="p-2 text-center text-[10px] font-bold text-gray-500">${formatDisplayDate(u.NgayCapNhat)}</td><td class="p-2 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${c}">${u.TrangThai}</span></td></tr>`;
+                                    const badge = n === 'fresh' ? 'bg-green-100 text-green-700' : n === 'recent' ? 'bg-blue-100 text-blue-700' : n === 'stale' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
+                                    const techBadge = u.LoiKyThuat && u.LoiKyThuat !== "Sạch lỗi" ? 'text-red-500' : 'text-green-500';
+                                    return `
+                                        <tr class="border-b border-gray-50">
+                                            <td class="p-3 text-xs font-bold text-gray-300">${i+1}</td>
+                                            <td class="p-3"><a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] break-all hover:underline">${u.URL}</a></td>
+                                            <td class="p-3 text-center text-[10px] font-bold text-gray-500">${formatDisplayDate(u.NgayCapNhat)}</td>
+                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${badge}">${u.TrangThai}</span></td>
+                                            <td class="p-3 text-center ${techBadge} text-xs font-bold">${u.LoiKyThuat || 'Sạch lỗi'}</td>
+                                        </tr>`;
                                 }).join('')}
                             </tbody>
                         </table>
