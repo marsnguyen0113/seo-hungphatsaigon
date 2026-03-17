@@ -125,11 +125,12 @@ async function loadData() {
 /**
  * 6. VẼ BIỂU ĐỒ (CHART.JS)
  */
-function renderAllCharts(total, fresh, outdated) {
+function renderAllCharts(total) {
     const catCounts = {};
     const monthCounts = {};
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
     
+    // Khởi tạo dòng thời gian 12 tháng
     for (let i = 11; i >= 0; i--) {
         const d = new Date(); d.setMonth(d.getMonth() - i);
         monthCounts[d.toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })] = 0;
@@ -147,30 +148,135 @@ function renderAllCharts(total, fresh, outdated) {
     });
 
     const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
-
-    // Topic Chart
+    const themeColors = ['#F97316', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
     const top5 = sortedCats.slice(0, 5);
-    const colors = ['#F97316', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
-    document.getElementById('topicLegend').innerHTML = top5.map((c, i) => `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${colors[i]}"></span><span>${c[0]} (${c[1]})</span></div>`).join('');
-    charts.topic = new Chart(document.getElementById('topicChart'), { type: 'doughnut', data: { labels: top5.map(c => c[0]), datasets: [{ data: top5.map(c => c[1]), backgroundColor: colors }] }, options: { cutout: '70%', plugins: { legend: { display: false } } } });
 
-    // Status Chart
-    charts.status = new Chart(document.getElementById('statusChart'), { type: 'bar', data: { labels: ['Mới', 'Gần đây', 'Xem xét', 'Lỗi thời'], datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'], borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+    // BỘ CẤU HÌNH GIAO DIỆN CHUNG (Tạo hiệu ứng mượt & Tooltip sang trọng)
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            duration: 1500, // Kéo dài thời gian chuyển động để tạo độ mượt
+            easing: 'easeOutQuart' // Hiệu ứng giảm tốc tự nhiên
+        },
+        hover: {
+            mode: 'index',
+            intersect: false,
+            animationDuration: 400
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                enabled: true,
+                backgroundColor: 'rgba(255, 255, 255, 0.98)', // Nền trắng trong suốt
+                titleColor: '#1F2937', // Chữ tiêu đề xám đậm
+                bodyColor: '#4B5563',  // Chữ nội dung xám nhạt
+                borderColor: '#E5E7EB', // Viền mỏng tinh tế
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 6,
+                usePointStyle: true, // Điểm màu dạng hình tròn thay vì hình vuông
+                cornerRadius: 8,
+                titleFont: { size: 14, weight: 'bold', family: "'Inter', sans-serif" },
+                bodyFont: { size: 13, weight: '500', family: "'Inter', sans-serif" },
+                callbacks: {
+                    label: function(context) {
+                        return ` ${context.label || context.dataset.label}: ${context.raw} bài`;
+                    }
+                }
+            }
+        }
+    };
 
-    // Timeline Chart
-    charts.timeline = new Chart(document.getElementById('timelineChart'), { type: 'line', data: { labels: Object.keys(monthCounts), datasets: [{ label: 'Cập nhật', data: Object.values(monthCounts), borderColor: '#10B981', tension: 0.4, fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+    // Hàm hỗ trợ: Tự động xóa biểu đồ cũ trước khi vẽ lại (tránh lỗi đè Canvas)
+    const renderChart = (id, config) => {
+        if (charts[id]) charts[id].destroy();
+        charts[id] = new Chart(document.getElementById(id), config);
+    };
 
-    // Category Bar
-    const top8 = sortedCats.slice(0, 8);
-    charts.brand = new Chart(document.getElementById('categoryBarChart'), { type: 'bar', data: { labels: top8.map(c => c[0]), datasets: [{ data: top8.map(c => c[1]), backgroundColor: '#8B5CF6', borderRadius: 5 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+    // 1. Top Chủ Đề (Doughnut) - Thêm hiệu ứng phình to khi hover (hoverOffset)
+    document.getElementById('topicLegend').innerHTML = top5.map((c, i) => 
+        `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${themeColors[i]}"></span><span class="text-sm font-medium text-gray-600">${c[0]} (${c[1]})</span></div>`
+    ).join('');
+    
+    renderChart('topicChart', { 
+        type: 'doughnut', 
+        data: { 
+            labels: top5.map(c => c[0]), 
+            datasets: [{ 
+                data: top5.map(c => c[1]), 
+                backgroundColor: themeColors, 
+                borderWidth: 2, 
+                borderColor: '#ffffff', 
+                hoverOffset: 8 // Nổi bật phần tử khi đưa chuột vào
+            }] 
+        },
+        options: { ...commonOptions, cutout: '75%' }
+    });
 
-    // Health Score
-    const score = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
-    document.getElementById('healthScoreValue').textContent = score;
+    // 2. Trạng thái Nội dung (Bar)
+    renderChart('statusChart', { 
+        type: 'bar', 
+        data: { 
+            labels: ['Mới', 'Gần đây', 'Cần xem xét', 'Lỗi thời'], 
+            datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'], borderRadius: 6 }] 
+        },
+        options: { ...commonOptions }
+    });
+
+    // 3. Lịch sử cập nhật (Line) - Thêm hiệu ứng đường cong (tension)
+    renderChart('timelineChart', { 
+        type: 'line', 
+        data: { 
+            labels: Object.keys(monthCounts), 
+            datasets: [{ 
+                label: 'Lượt cập nhật', 
+                data: Object.values(monthCounts), 
+                borderColor: '#F97316', 
+                backgroundColor: 'rgba(249, 115, 22, 0.1)', 
+                fill: true, 
+                tension: 0.4, // Làm cong các điểm nối 
+                pointBackgroundColor: '#ffffff', 
+                pointBorderColor: '#F97316', 
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }] 
+        },
+        options: { 
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    intersect: false,
+                    mode: 'index'
+                }
+            },
+            scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f3f4f6' } }, x: { grid: { display: false } } }
+        }
+    });
+
+    // 4. Điểm Sức Khỏe (Doughnut)
+    const healthScore = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
+    document.getElementById('healthScoreValue').textContent = healthScore;
     document.getElementById('healthFresh').textContent = (statusCounts.fresh + statusCounts.recent) + ' bài';
     document.getElementById('healthStale').textContent = statusCounts.stale + ' bài';
     document.getElementById('healthOutdated').textContent = statusCounts.outdated + ' bài';
-    charts.health = new Chart(document.getElementById('healthScore'), { type: 'doughnut', data: { datasets: [{ data: [score, 100 - score], backgroundColor: [score >= 70 ? '#10B981' : '#EF4444', '#E5E7EB'] }] }, options: { cutout: '80%', plugins: { tooltip: { enabled: false } } } });
+    
+    renderChart('healthScore', { 
+        type: 'doughnut', 
+        data: { 
+            labels: ['Khỏe mạnh', 'Cần xử lý'], 
+            datasets: [{ 
+                data: [healthScore, 100 - healthScore], 
+                backgroundColor: [healthScore >= 70 ? '#10B981' : '#EF4444', '#F3F4F6'], 
+                borderWidth: 0, 
+                hoverOffset: 4 
+            }] 
+        },
+        options: { ...commonOptions, cutout: '80%' }
+    });
 }
 
 /**
