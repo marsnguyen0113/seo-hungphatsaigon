@@ -179,16 +179,47 @@ function renderAllCharts(total, fresh, outdated) {
  */
 function renderTop10Priority() {
     let list = globalDetails.filter(i => ['outdated', 'stale'].includes(getNormalizedStatus(i.TrangThai)));
+    // Sắp xếp ưu tiên bài cũ nhất lên đầu
     list.sort((a, b) => (parseDate(a.NgayCapNhat) || 0) - (parseDate(b.NgayCapNhat) || 0));
     
-    document.getElementById('priorityUrlsTable').innerHTML = list.slice(0, 10).map((u, i) => `
-        <tr class="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
-            <td class="px-3 py-3 text-gray-400 font-bold">${i + 1}</td>
-            <td class="px-3 py-3"><a href="${u.URL}" target="_blank" class="text-blue-600 hover:underline text-xs break-all">${String(u.URL).replace('https://hungphatsaigon.vn/', '')}</a></td>
-            <td class="px-3 py-3 text-center text-gray-500 font-bold text-xs">${formatDisplayDate(u.NgayCapNhat)}</td>
-            <td class="px-3 py-3 text-center"><span class="px-2 py-1 ${getNormalizedStatus(u.TrangThai) === 'outdated' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} rounded text-[10px] font-black uppercase">${u.TrangThai}</span></td>
-        </tr>
-    `).join('');
+    const tbody = document.getElementById('priorityUrlsTable');
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-green-600 font-bold">Nội dung website đang ở trạng thái tốt!</td></tr>';
+        return;
+    }
+
+    // Lấy mốc thời gian ngày hôm nay (loại bỏ giờ phút để tính toán chính xác)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    tbody.innerHTML = list.slice(0, 10).map((u, i) => {
+        const status = getNormalizedStatus(u.TrangThai);
+        // Đổi style hiển thị: Lỗi thời thì đỏ, cần xem xét thì cam
+        const badgeClass = status === 'outdated' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-orange-100 text-orange-700 border border-orange-200';
+        
+        // Logic tính toán số ngày
+        let daysText = "Không rõ";
+        const updateDate = parseDate(u.NgayCapNhat);
+        if (updateDate) {
+            updateDate.setHours(0, 0, 0, 0);
+            const diffTime = Math.abs(today - updateDate);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            daysText = `${diffDays} ngày`;
+        }
+
+        return `
+            <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <td class="px-3 py-3 text-gray-400 font-bold">${i + 1}</td>
+                <td class="px-3 py-3">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 hover:underline text-xs break-all">${String(u.URL).replace('https://hungphatsaigon.vn/', '')}</a>
+                </td>
+                <td class="px-3 py-3 text-center text-gray-500 font-medium text-xs">${formatDisplayDate(u.NgayCapNhat)}</td>
+                <td class="px-3 py-3 text-center">
+                    <span class="px-2 py-1 rounded text-xs font-black ${badgeClass}">${daysText}</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 /**
