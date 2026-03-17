@@ -9,16 +9,15 @@ let charts = {};
  * 1. HÀM CHUYỂN ĐỔI NGÀY THÁNG ĐỂ HIỂN THỊ (Chuẩn hóa về DD/MM/YYYY)
  */
 function formatDisplayDate(dateStr) {
-    if (!dateStr) return 'N/A';
-    const str = String(dateStr).trim();
-    const parts = str.split('/');
-    if (parts.length === 3) {
-        // Xử lý thông minh: Nếu phần đầu > 12 thì đó là Ngày, nếu phần giữa > 12 thì đó là Ngày
-        let d = parts[0], m = parts[1], y = parts[2];
-        if (parseInt(parts[1]) > 12) { [d, m] = [parts[1], parts[0]]; } 
-        return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
-    }
-    return dateStr;
+    const d = parseDate(dateStr);
+    if (!d || isNaN(d)) return 'N/A';
+    
+    // Ép tạo chuỗi DD/MM/YYYY thủ công để trình duyệt không tự đổi thành ISO
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    
+    return `${day}/${month}/${year}`;
 }
 
 /**
