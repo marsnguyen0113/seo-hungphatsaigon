@@ -397,14 +397,14 @@ function renderCategoryAccordion() {
                                 ${g.urls.map((u, i) => {
                                     const n = getNormalizedStatus(u.TrangThai);
                                     const badge = n === 'fresh' ? 'bg-green-100 text-green-700' : n === 'recent' ? 'bg-blue-100 text-blue-700' : n === 'stale' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
-                                    const techBadge = u.LoiKyThuat && u.LoiKyThuat !== "Sạch lỗi" ? 'text-red-500' : 'text-green-500';
+                                    const techBadge = u.LoiKyThuat && u.LoiKyThuat !== "OK" ? 'text-red-500' : 'text-green-500';
                                     return `
                                         <tr class="border-b border-gray-50">
                                             <td class="p-3 text-xs font-bold text-gray-300">${i+1}</td>
                                             <td class="p-3"><a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] break-all hover:underline">${u.URL}</a></td>
                                             <td class="p-3 text-center text-[10px] font-bold text-gray-500">${formatDisplayDate(u.NgayCapNhat)}</td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${badge}">${u.TrangThai}</span></td>
-                                            <td class="p-3 text-center ${techBadge} text-xs font-bold">${u.LoiKyThuat || 'Sạch lỗi'}</td>
+                                            <td class="p-3 text-center ${techBadge} text-xs font-bold">${u.LoiKyThuat || 'OK'}</td>
                                         </tr>`;
                                 }).join('')}
                             </tbody>
