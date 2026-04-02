@@ -84,7 +84,7 @@ function initFilters() {
  */
 async function loadData() {
     const tbody = document.getElementById('categoryAccordionBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang kết nối dữ liệu Hưng Phát Sài Gòn...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Hệ thống đang nội soi website Hưng Phát Sài Gòn...</td></tr>';
 
     try {
         const response = await fetch(API_URL);
@@ -118,7 +118,7 @@ async function loadData() {
 }
 
 /**
- * 6. VẼ BIỂU ĐỒ (CHART.JS)
+ * 6. VẼ BIỂU ĐỒ
  */
 function renderAllCharts(total) {
     const catCounts = {};
@@ -133,7 +133,6 @@ function renderAllCharts(total) {
     const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
     const themeColors = ['#F97316', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
     const top5 = sortedCats.slice(0, 5);
-
     const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
 
     const renderChart = (id, config) => {
@@ -169,38 +168,24 @@ function renderAllCharts(total) {
 function renderTop10Priority() {
     let list = globalDetails.filter(i => ['outdated', 'stale'].includes(getNormalizedStatus(i.TrangThai)));
     list.sort((a, b) => (parseDate(a.NgayCapNhat) || 0) - (parseDate(b.NgayCapNhat) || 0));
-    
     const tbody = document.getElementById('priorityUrlsTable');
-    if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-green-600 font-bold">Website đang ở trạng thái lý tưởng!</td></tr>';
-        return;
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    if (!tbody) return;
+    
     tbody.innerHTML = list.slice(0, 10).map((u, i) => {
         const status = getNormalizedStatus(u.TrangThai);
-        const badgeClass = status === 'outdated' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-orange-100 text-orange-700 border border-orange-200';
-        let daysText = "N/A";
-        const updateDate = parseDate(u.NgayCapNhat);
-        if (updateDate) {
-            updateDate.setHours(0, 0, 0, 0);
-            const diffDays = Math.floor(Math.abs(today - updateDate) / (1000 * 60 * 60 * 24));
-            daysText = `${diffDays} ngày`;
-        }
+        const badgeClass = status === 'outdated' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700';
         return `
-            <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+            <tr class="border-b border-gray-50 hover:bg-gray-50">
                 <td class="px-3 py-3 text-gray-400 font-bold">${i + 1}</td>
-                <td class="px-3 py-3 text-xs break-all text-blue-600 font-medium">${u.URL.replace('https://hungphatsaigon.vn/', '')}</td>
+                <td class="px-3 py-3 text-xs text-blue-600 font-medium">${u.URL.replace('https://hungphatsaigon.vn/', '')}</td>
                 <td class="px-3 py-3 text-center text-gray-500 text-xs">${formatDisplayDate(u.NgayCapNhat)}</td>
-                <td class="px-3 py-3 text-center"><span class="px-2 py-1 rounded text-xs font-black ${badgeClass}">${daysText}</span></td>
+                <td class="px-3 py-3 text-center"><span class="px-2 py-1 rounded text-xs font-black ${badgeClass}">${u.TrangThai}</span></td>
             </tr>`;
     }).join('');
 }
 
 /**
- * 8. RENDER BẢNG ACCORDION - PHIÊN BẢN TRAFFIC SO SÁNH (SORTED)
+ * 8. RENDER BẢNG ACCORDION - PHIÊN BẢN NỘI SOI SEO CHI TIẾT
  */
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
@@ -225,79 +210,79 @@ function renderCategoryAccordion() {
     });
 
     tbody.innerHTML = '';
-    if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-medium">Không tìm thấy nội dung phù hợp yêu cầu lọc.</td></tr>';
-        return;
-    }
-
     Object.keys(grouped).forEach((key, index) => {
         const g = grouped[key];
-        
-        // --- LOGIC SẮP XẾP: Traffic cao nhất lên đầu ---
         g.urls.sort((a, b) => (parseInt(b.TrafficCurrent) || 0) - (parseInt(a.TrafficCurrent) || 0));
         
         const rowId = 'cat-row-' + index;
         const totalInGroup = g.urls.length;
 
         let html = `
-            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
+            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer" onclick="toggleAccordion('${rowId}')">
                 <td class="px-4 py-4 font-bold text-gray-800 text-sm"><i class="fas fa-folder text-orange-400 mr-2"></i>${g.main}</td>
                 <td class="px-4 py-4 text-gray-500 font-bold text-xs">${g.sub}</td>
                 <td class="px-4 py-4 text-center font-black text-orange-600">${totalInGroup}</td>
                 <td class="px-4 py-4 text-center text-gray-400 text-xs">${((totalInGroup / (globalDetails.length || 1)) * 100).toFixed(1)}%</td>
                 <td class="px-4 py-4 text-center text-gray-500 text-xs font-bold">---</td>
                 <td class="px-4 py-4 text-center">
-                    <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">
-                        Chi tiết <i class="fas fa-chevron-right ml-1 transition-transform" id="icon-${rowId}"></i>
-                    </button>
+                    <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">Chi tiết <i class="fas fa-chevron-right ml-1 transition-transform" id="icon-${rowId}"></i></button>
                 </td>
             </tr>
-            <tr id="${rowId}" class="hidden bg-gray-50/30 border-b-2 border-orange-100">
+            <tr id="${rowId}" class="hidden bg-gray-50/30">
                 <td colspan="6" class="p-4">
-                    <div class="max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-inner">
-                        <table class="w-full text-left">
+                    <div class="max-h-120 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+                        <table class="w-full text-left table-fixed">
                             <thead class="bg-gray-100 font-bold text-[10px] text-gray-400 uppercase sticky top-0 z-10">
                                 <tr>
-                                    <th class="p-3">STT</th>
-                                    <th class="p-3">URL</th>
-                                    <th class="p-3 text-center">Trạng thái</th>
-                                    <th class="p-3 text-center">Kỹ thuật</th>
-                                    <th class="p-3 text-center">Tháng này</th>
-                                    <th class="p-3 text-center">Tháng trước</th>
-                                    <th class="p-3 text-center">Xu hướng</th>
+                                    <th class="p-3 w-10">STT</th>
+                                    <th class="p-3 w-1/2">Phân tích URL & Kỹ thuật SEO</th>
+                                    <th class="p-3 text-center w-24">Trạng thái</th>
+                                    <th class="p-3 text-center w-24">Traffic</th>
+                                    <th class="p-3 text-center w-24">Xu hướng</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${g.urls.map((u, i) => {
                                     const n = getNormalizedStatus(u.TrangThai);
                                     const badge = n === 'fresh' ? 'bg-green-100 text-green-700' : n === 'recent' ? 'bg-blue-100 text-blue-700' : n === 'stale' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
-                                    const techClass = (u.LoiKyThuat === "OK") ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200';
                                     
                                     const cur = parseInt(u.TrafficCurrent) || 0;
                                     const last = parseInt(u.TrafficLast) || 0;
                                     const diff = cur - last;
+                                    let trendHtml = diff > 0 ? `<span class="text-green-600 font-bold">+${diff}</span>` : diff < 0 ? `<span class="text-red-600 font-bold">${diff}</span>` : `<span class="text-gray-300">--</span>`;
 
-                                    let trendHtml = '';
-                                    if (diff > 0) {
-                                        trendHtml = `<span class="text-green-600 font-bold"><i class="fas fa-caret-up mr-1"></i>+${diff.toLocaleString()}</span>`;
-                                    } else if (diff < 0) {
-                                        trendHtml = `<span class="text-red-600 font-bold"><i class="fas fa-caret-down mr-1"></i>${diff.toLocaleString()}</span>`;
-                                    } else {
-                                        trendHtml = `<span class="text-gray-400">--</span>`;
-                                    }
-
-                                    const curClass = cur >= 100 ? 'bg-green-500 text-white px-2 py-0.5 rounded-full font-black shadow-sm' : 'font-bold text-gray-700';
+                                    // BIẾN NỘI SOI (SEO MEDICAL)
+                                    const isIndexable = String(u.Indexability).includes('Non') ? 'text-red-600 font-black' : 'text-green-600';
+                                    const wordCountClass = u.WordCount < 500 ? 'text-orange-500 font-bold' : 'text-gray-700';
+                                    const titleClass = (u.TitleLen > 60 || u.TitleLen < 30) ? 'text-red-500 font-bold' : 'text-gray-700';
 
                                     return `
-                                        <tr class="border-b border-gray-50 hover:bg-gray-50/50">
+                                        <tr class="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
                                             <td class="p-3 text-xs font-bold text-gray-300">${i+1}</td>
                                             <td class="p-3">
-                                                <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] break-all hover:underline leading-relaxed">${u.URL}</a>
+                                                <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] font-bold break-all hover:underline leading-relaxed">${u.URL}</a>
+                                                
+                                                <div class="grid grid-cols-2 gap-3 mt-3 p-3 bg-gray-50 rounded border border-gray-100 shadow-sm">
+                                                    <div class="text-[10px]">
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Tiêu đề (Title Tech)</div>
+                                                        <div class="${titleClass} leading-tight">${u.TitleTech} <span class="text-[9px] opacity-70">(${u.TitleLen} ký tự)</span></div>
+                                                    </div>
+                                                    <div class="text-[10px]">
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Thẻ H1</div>
+                                                        <div class="${u.H1Tech === 'N/A' ? 'text-red-500' : 'text-gray-700'} leading-tight font-medium">${u.H1Tech}</div>
+                                                    </div>
+                                                    <div class="text-[10px]">
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Chất lượng nội dung</div>
+                                                        <div class="${wordCountClass}"><i class="fas fa-file-alt mr-1"></i>${u.WordCount.toLocaleString()} chữ</div>
+                                                    </div>
+                                                    <div class="text-[10px]">
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Internal SEO</div>
+                                                        <div class="text-blue-600 font-bold"><i class="fas fa-link mr-1"></i>${u.Inlinks} Inlinks | <span class="${isIndexable}">${u.Indexability}</span></div>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${badge}">${u.TrangThai}</span></td>
-                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded border text-[9px] font-black uppercase ${techClass}">${u.LoiKyThuat}</span></td>
-                                            <td class="p-3 text-center text-xs"><span class="${curClass}">${cur.toLocaleString('vi-VN')}</span></td>
-                                            <td class="p-3 text-center text-xs text-gray-400 font-medium">${last.toLocaleString('vi-VN')}</td>
+                                            <td class="p-3 text-center"><span class="text-xs font-black text-gray-700">${cur.toLocaleString()}</span></td>
                                             <td class="p-3 text-center text-[10px]">${trendHtml}</td>
                                         </tr>`;
                                 }).join('')}
@@ -322,5 +307,4 @@ function toggleAccordion(id) {
     }
 }
 
-// KHỞI CHẠY
 loadData();
