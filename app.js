@@ -3,6 +3,7 @@ const API_URL = "https://api-hungphatsaigon.hoangtuanvpro.workers.dev/";
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN');
 let globalDetails = [];
 let charts = {};
+// BIẾN MỚI CHO RANK TRACKING
 let rankTrackingData = []; 
 
 function formatDisplayDate(dateStr) {
@@ -54,9 +55,10 @@ async function loadData() {
         const data = await response.json();
         
         globalDetails = data.chiTiet || [];
-        rankTrackingData = data.rankTracking || [];
+        rankTrackingData = data.rankTracking || []; // LẤY DỮ LIỆU TỪ KHÓA
         const tq = data.tongQuan;
         
+        // CẬP NHẬT KPI (Tính năng gốc của bạn)
         document.getElementById('totalUrls').textContent = tq.tongUrl || '0';
         document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
         document.getElementById('freshContent').textContent = tq.baiMoi || '0';
@@ -65,7 +67,7 @@ async function loadData() {
 
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
-        renderRankTracking();
+        renderRankTracking(); // VẼ BẢNG TỪ KHÓA MỚI
         renderCategoryAccordion();
         initFilters();
     } catch (e) { console.error(e); }
@@ -75,12 +77,14 @@ function renderAllCharts(total) {
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
     globalDetails.forEach(item => statusCounts[getNormalizedStatus(item.TrangThai)]++);
     
+    // Biểu đồ trạng thái (Tính năng gốc)
     if (charts['statusChart']) charts['statusChart'].destroy();
     charts['statusChart'] = new Chart(document.getElementById('statusChart'), {
         type: 'bar',
         data: { labels: ['Mới', 'Gần đây', 'Sắp cũ', 'Lỗi thời'], datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
+    // Biểu đồ sức khỏe (Tính năng gốc)
     const health = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
     document.getElementById('healthScoreValue').textContent = health;
 }
@@ -99,6 +103,9 @@ function renderTop10Priority() {
         </tr>`).join('');
 }
 
+/**
+ * TÍNH NĂNG MỚI: BẢNG THEO DÕI TỪ KHÓA (RANK TRACKING PRO)
+ */
 function renderRankTracking() {
     let container = document.getElementById('rankTrackingContainer');
     if (!container) {
@@ -115,20 +122,36 @@ function renderRankTracking() {
 
     let rows = rankTrackingData.map((kw) => {
         const pos = parseFloat(kw.Position).toFixed(1);
+        const posLast = parseFloat(kw.PositionLast) || pos;
+        
+        let trend = posLast - pos; 
+        let trendHtml = '';
+        if (trend > 0.5) trendHtml = `<span class="text-green-500 font-bold ml-2 text-[10px]"><i class="fas fa-arrow-up"></i> ${trend.toFixed(1)}</span>`;
+        else if (trend < -0.5) trendHtml = `<span class="text-red-500 font-bold ml-2 text-[10px]"><i class="fas fa-arrow-down"></i> ${Math.abs(trend).toFixed(1)}</span>`;
+        else trendHtml = `<span class="text-gray-300 font-bold ml-2 text-[10px]">-</span>`;
+
+        let isLowHanging = (pos > 10 && pos <= 15) ? 'bg-yellow-50 border-l-4 border-yellow-400' : 'hover:bg-gray-50';
+        let alertTag = (pos > 10 && pos <= 15) ? `<span class="ml-2 bg-yellow-200 text-yellow-800 text-[8px] px-1 rounded uppercase font-black">Cơ hội đẩy Top</span>` : '';
+
         let posBadge = pos <= 3 ? 'bg-green-100 text-green-700' : (pos <= 10 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600');
+        
         return `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-3 text-sm font-bold text-gray-800">${kw.Keyword}</td>
+            <tr class="border-b ${isLowHanging}">
+                <td class="p-3 text-sm font-bold text-gray-800">${kw.Keyword} ${alertTag}</td>
                 <td class="p-3 text-center text-blue-600 font-bold">${parseInt(kw.Clicks).toLocaleString('vi-VN')}</td>
                 <td class="p-3 text-center text-gray-600">${parseInt(kw.Impressions).toLocaleString('vi-VN')}</td>
-                <td class="p-3 text-center font-bold text-[10px]"><span class="px-2 py-1 rounded ${posBadge}">Top ${pos}</span></td>
+                <td class="p-3 text-center font-bold text-xs">${kw.CTR || '0%'}</td>
+                <td class="p-3 text-center font-bold text-[10px]">
+                    <span class="px-2 py-1 rounded ${posBadge}">Top ${pos}</span>
+                    ${trendHtml}
+                </td>
             </tr>
         `;
     }).join('');
 
     container.innerHTML = `
         <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex justify-between items-center">
-            <h2 class="text-lg font-black text-gray-800"><i class="fas fa-trophy text-yellow-500 mr-2"></i>Theo dõi từ khóa chủ lực (Search Console)</h2>
+            <h2 class="text-lg font-black text-gray-800"><i class="fas fa-trophy text-yellow-500 mr-2"></i>Radar Từ Khóa (Rank Tracking Pro)</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left">
@@ -137,7 +160,8 @@ function renderRankTracking() {
                         <th class="p-3">Từ khóa mục tiêu</th>
                         <th class="p-3 text-center">Clicks</th>
                         <th class="p-3 text-center">Hiển thị (Imp)</th>
-                        <th class="p-3 text-center">Vị trí trung bình</th>
+                        <th class="p-3 text-center">Tỉ lệ nhấp (CTR)</th>
+                        <th class="p-3 text-center">Vị trí & Xu hướng</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -188,7 +212,7 @@ function renderCategoryAccordion() {
                     <div class="max-h-120 overflow-y-auto rounded-lg border bg-white shadow-inner">
                         <table class="w-full text-left">
                             <thead class="bg-gray-100 text-[10px] text-gray-400 uppercase sticky top-0 z-10">
-                                <tr><th class="p-3 w-10">STT</th><th class="p-3">Phân tích URL, SEO Audit & GSC</th><th class="p-3 text-center w-24">Trạng thái</th><th class="p-3 text-center w-24">Traffic</th><th class="p-3 text-center w-24">Xu hướng</th></tr>
+                                <tr><th class="p-3 w-10">STT</th><th class="p-3">Phân tích URL, Điểm SEO & GSC</th><th class="p-3 text-center w-24">Trạng thái</th><th class="p-3 text-center w-24">Traffic</th><th class="p-3 text-center w-24">Xu hướng</th></tr>
                             </thead>
                             <tbody>
                                 ${g.urls.map((u, i) => {
@@ -196,13 +220,26 @@ function renderCategoryAccordion() {
                                     const titleErr = (u.TitleLen > 60 || u.TitleLen < 30) ? 'text-red-500' : 'text-gray-700';
                                     const isIndexable = String(u.Indexability).includes('Non') ? 'text-red-600' : 'text-green-600';
                                     
+                                    // TỰ ĐỘNG CHẤM ĐIỂM SEO ONPAGE
+                                    let seoScore = 100;
+                                    if (u.TitleLen < 30 || u.TitleLen > 60) seoScore -= 20;
+                                    if (u.H1Tech === 'N/A' || u.H1Tech === '') seoScore -= 20;
+                                    if (u.WordCount < 500) seoScore -= 20;
+                                    if (u.Inlinks < 2) seoScore -= 10;
+                                    if (String(u.Indexability).includes('Non')) seoScore -= 50;
+                                    seoScore = Math.max(0, seoScore); // Không cho âm điểm
+                                    let scoreColor = seoScore >= 90 ? 'bg-green-500' : (seoScore >= 70 ? 'bg-orange-500' : 'bg-red-500');
+                                    
                                     return `
                                         <tr class="border-b hover:bg-blue-50/30 transition-colors">
                                             <td class="p-3 text-xs text-gray-300 font-bold">${i+1}</td>
                                             <td class="p-3">
-                                                <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] font-bold hover:underline">${u.URL}</a>
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <span class="${scoreColor} text-white font-black text-[9px] px-2 py-0.5 rounded" title="Điểm SEO Onpage">Điểm SEO: ${seoScore}</span>
+                                                    <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] font-bold hover:underline">${u.URL}</a>
+                                                </div>
                                                 
-                                                <div class="grid grid-cols-3 gap-3 mt-2 p-2 bg-gray-50 rounded text-[9px] border border-gray-100 shadow-sm">
+                                                <div class="grid grid-cols-3 gap-3 p-2 bg-gray-50 rounded text-[9px] border border-gray-100 shadow-sm">
                                                     <div class="col-span-2 grid grid-cols-2 gap-2 border-r border-gray-200 pr-2">
                                                         <div><span class="text-gray-400 uppercase font-bold">Title:</span> <span class="${titleErr}">${u.TitleTech} (${u.TitleLen})</span></div>
                                                         <div><span class="text-gray-400 uppercase font-bold">H1:</span> <span>${u.H1Tech}</span></div>
