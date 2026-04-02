@@ -200,7 +200,7 @@ function renderTop10Priority() {
 }
 
 /**
- * 8. RENDER BẢNG ACCORDION - PHIÊN BẢN TRAFFIC SO SÁNH (FINAL)
+ * 8. RENDER BẢNG ACCORDION - PHIÊN BẢN TRAFFIC SO SÁNH (SORTED)
  */
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
@@ -232,6 +232,10 @@ function renderCategoryAccordion() {
 
     Object.keys(grouped).forEach((key, index) => {
         const g = grouped[key];
+        
+        // --- LOGIC SẮP XẾP: Traffic cao nhất lên đầu ---
+        g.urls.sort((a, b) => (parseInt(b.TrafficCurrent) || 0) - (parseInt(a.TrafficCurrent) || 0));
+        
         const rowId = 'cat-row-' + index;
         const totalInGroup = g.urls.length;
 
@@ -269,7 +273,6 @@ function renderCategoryAccordion() {
                                     const badge = n === 'fresh' ? 'bg-green-100 text-green-700' : n === 'recent' ? 'bg-blue-100 text-blue-700' : n === 'stale' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
                                     const techClass = (u.LoiKyThuat === "OK") ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200';
                                     
-                                    // Logic So sánh Traffic
                                     const cur = parseInt(u.TrafficCurrent) || 0;
                                     const last = parseInt(u.TrafficLast) || 0;
                                     const diff = cur - last;
@@ -283,7 +286,6 @@ function renderCategoryAccordion() {
                                         trendHtml = `<span class="text-gray-400">--</span>`;
                                     }
 
-                                    // Highlight cho bài viết Hot (Tháng này > 100 view)
                                     const curClass = cur >= 100 ? 'bg-green-500 text-white px-2 py-0.5 rounded-full font-black shadow-sm' : 'font-bold text-gray-700';
 
                                     return `
