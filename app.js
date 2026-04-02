@@ -128,8 +128,8 @@ function renderRankTracking() {
         return `
             <tr class="border-b hover:bg-gray-50">
                 <td class="p-3 text-sm font-bold text-gray-800">${kw.Keyword}</td>
-                <td class="p-3 text-center text-blue-600 font-bold">${parseInt(kw.Clicks).toLocaleString()}</td>
-                <td class="p-3 text-center text-gray-600">${parseInt(kw.Impressions).toLocaleString()}</td>
+                <td class="p-3 text-center text-blue-600 font-bold">${parseInt(kw.Clicks).toLocaleString('vi-VN')}</td>
+                <td class="p-3 text-center text-gray-600">${parseInt(kw.Impressions).toLocaleString('vi-VN')}</td>
                 <td class="p-3 text-center font-bold text-[10px]"><span class="px-2 py-1 rounded ${posBadge}">Top ${pos}</span></td>
             </tr>
         `;
@@ -215,21 +215,22 @@ function renderCategoryAccordion() {
                                                     <div class="col-span-2 grid grid-cols-2 gap-2 border-r border-gray-200 pr-2">
                                                         <div><span class="text-gray-400 uppercase font-bold">Title:</span> <span class="${titleErr}">${u.TitleTech} (${u.TitleLen})</span></div>
                                                         <div><span class="text-gray-400 uppercase font-bold">H1:</span> <span>${u.H1Tech}</span></div>
-                                                        <div><span class="text-gray-400 uppercase font-bold">Content:</span> <span class="${u.WordCount < 500 ? 'text-orange-500 font-bold' : ''}">${parseInt(u.WordCount||0).toLocaleString()} chữ</span></div>
+                                                        <div><span class="text-gray-400 uppercase font-bold">Content:</span> <span class="${u.WordCount < 500 ? 'text-orange-500 font-bold' : ''}">${parseInt(u.WordCount||0).toLocaleString('vi-VN')} chữ</span></div>
                                                         <div><span class="text-gray-400 uppercase font-bold">Health:</span> <span>${u.Inlinks} Links | <b class="${isIndexable}">${u.Indexability}</b></span></div>
                                                     </div>
                                                     <div class="pl-1">
                                                         <div class="text-purple-600 uppercase font-black mb-1"><i class="fab fa-google mr-1"></i>Google Search</div>
                                                         <div class="flex justify-between"><span class="text-gray-500">Vị trí:</span> <b class="text-green-600">Top ${parseFloat(u.GSCPos||0).toFixed(1)}</b></div>
-                                                        <div class="flex justify-between"><span class="text-gray-500">Clicks:</span> <b>${parseInt(u.GSCClicks||0).toLocaleString()}</b></div>
-                                                        <div class="flex justify-between"><span class="text-gray-500">Imp:</span> <b>${parseInt(u.GSCImp||0).toLocaleString()}</b></div>
+                                                        <div class="flex justify-between"><span class="text-gray-500">Clicks:</span> <b>${parseInt(u.GSCClicks||0).toLocaleString('vi-VN')}</b></div>
+                                                        <div class="flex justify-between"><span class="text-gray-500">Imp:</span> <b>${parseInt(u.GSCImp||0).toLocaleString('vi-VN')}</b></div>
+                                                        <div class="flex justify-between"><span class="text-gray-500">CTR:</span> <b>${u.GSCCTR || '0%'}</b></div>
                                                     </div>
                                                 </div>
                                                 
                                             </td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-100 text-blue-700">${u.TrangThai}</span></td>
-                                            <td class="p-3 text-center font-bold text-xs">${parseInt(u.TrafficCurrent).toLocaleString()}</td>
-                                            <td class="p-3 text-center text-[10px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}">${diff > 0 ? '+'+diff : diff}</td>
+                                            <td class="p-3 text-center font-bold text-xs">${parseInt(u.TrafficCurrent).toLocaleString('vi-VN')}</td>
+                                            <td class="p-3 text-center text-[10px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}">${diff > 0 ? '+' + diff.toLocaleString('vi-VN') : diff.toLocaleString('vi-VN')}</td>
                                         </tr>`;
                                 }).join('')}
                             </tbody>
