@@ -1,10 +1,8 @@
-// ĐIỀN LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
 const API_URL = "https://api-hungphatsaigon.hoangtuanvpro.workers.dev/";
 
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN');
 let globalDetails = [];
 let charts = {};
-// BIẾN MỚI CHO RANK TRACKING
 let rankTrackingData = []; 
 
 function formatDisplayDate(dateStr) {
@@ -56,10 +54,9 @@ async function loadData() {
         const data = await response.json();
         
         globalDetails = data.chiTiet || [];
-        rankTrackingData = data.rankTracking || []; // LẤY DỮ LIỆU TỪ KHÓA
+        rankTrackingData = data.rankTracking || [];
         const tq = data.tongQuan;
         
-        // CẬP NHẬT KPI (Tính năng gốc của bạn)
         document.getElementById('totalUrls').textContent = tq.tongUrl || '0';
         document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
         document.getElementById('freshContent').textContent = tq.baiMoi || '0';
@@ -68,7 +65,7 @@ async function loadData() {
 
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
-        renderRankTracking(); // VẼ BẢNG TỪ KHÓA MỚI
+        renderRankTracking();
         renderCategoryAccordion();
         initFilters();
     } catch (e) { console.error(e); }
@@ -78,14 +75,12 @@ function renderAllCharts(total) {
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
     globalDetails.forEach(item => statusCounts[getNormalizedStatus(item.TrangThai)]++);
     
-    // Biểu đồ trạng thái (Tính năng gốc)
     if (charts['statusChart']) charts['statusChart'].destroy();
     charts['statusChart'] = new Chart(document.getElementById('statusChart'), {
         type: 'bar',
         data: { labels: ['Mới', 'Gần đây', 'Sắp cũ', 'Lỗi thời'], datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
-    // Biểu đồ sức khỏe (Tính năng gốc)
     const health = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
     document.getElementById('healthScoreValue').textContent = health;
 }
@@ -104,9 +99,6 @@ function renderTop10Priority() {
         </tr>`).join('');
 }
 
-/**
- * TÍNH NĂNG MỚI: BẢNG THEO DÕI TỪ KHÓA (RANK TRACKING)
- */
 function renderRankTracking() {
     let container = document.getElementById('rankTrackingContainer');
     if (!container) {
@@ -119,7 +111,6 @@ function renderRankTracking() {
 
     if (rankTrackingData.length === 0) return;
 
-    // Sắp xếp: Từ khóa Top cao nhất lên đầu
     rankTrackingData.sort((a, b) => (parseFloat(a.Position) || 100) - (parseFloat(b.Position) || 100));
 
     let rows = rankTrackingData.map((kw) => {
