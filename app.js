@@ -1,9 +1,9 @@
+// ĐIỀN LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
 const API_URL = "https://api-hungphatsaigon.hoangtuanvpro.workers.dev/";
 
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN');
 let globalDetails = [];
 let charts = {};
-// BIẾN MỚI CHO RANK TRACKING
 let rankTrackingData = []; 
 
 function formatDisplayDate(dateStr) {
@@ -55,10 +55,9 @@ async function loadData() {
         const data = await response.json();
         
         globalDetails = data.chiTiet || [];
-        rankTrackingData = data.rankTracking || []; // LẤY DỮ LIỆU TỪ KHÓA
+        rankTrackingData = data.rankTracking || []; 
         const tq = data.tongQuan;
         
-        // CẬP NHẬT KPI (Tính năng gốc của bạn)
         document.getElementById('totalUrls').textContent = tq.tongUrl || '0';
         document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
         document.getElementById('freshContent').textContent = tq.baiMoi || '0';
@@ -67,7 +66,8 @@ async function loadData() {
 
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
-        renderRankTracking(); // VẼ BẢNG TỪ KHÓA MỚI
+        renderRankTracking(); 
+        renderZombieTool(); // KÍCH HOẠT RADAR ZOMBIE PAGES
         renderCategoryAccordion();
         initFilters();
     } catch (e) { console.error(e); }
@@ -77,14 +77,12 @@ function renderAllCharts(total) {
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
     globalDetails.forEach(item => statusCounts[getNormalizedStatus(item.TrangThai)]++);
     
-    // Biểu đồ trạng thái (Tính năng gốc)
     if (charts['statusChart']) charts['statusChart'].destroy();
     charts['statusChart'] = new Chart(document.getElementById('statusChart'), {
         type: 'bar',
         data: { labels: ['Mới', 'Gần đây', 'Sắp cũ', 'Lỗi thời'], datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
-    // Biểu đồ sức khỏe (Tính năng gốc)
     const health = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
     document.getElementById('healthScoreValue').textContent = health;
 }
@@ -103,9 +101,6 @@ function renderTop10Priority() {
         </tr>`).join('');
 }
 
-/**
- * TÍNH NĂNG MỚI: BẢNG THEO DÕI TỪ KHÓA (RANK TRACKING PRO)
- */
 function renderRankTracking() {
     let container = document.getElementById('rankTrackingContainer');
     if (!container) {
@@ -115,7 +110,6 @@ function renderRankTracking() {
         container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
         wrapper.parentNode.insertBefore(container, wrapper);
     }
-
     if (rankTrackingData.length === 0) return;
 
     rankTrackingData.sort((a, b) => (parseFloat(a.Position) || 100) - (parseFloat(b.Position) || 100));
@@ -162,6 +156,89 @@ function renderRankTracking() {
                         <th class="p-3 text-center">Hiển thị (Imp)</th>
                         <th class="p-3 text-center">Tỉ lệ nhấp (CTR)</th>
                         <th class="p-3 text-center">Vị trí & Xu hướng</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+/**
+ * TÍNH NĂNG MỚI: RADAR QUÉT ZOMBIE PAGES
+ */
+function renderZombieTool() {
+    let container = document.getElementById('zombieToolContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'zombieToolContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    // THUẬT TOÁN BẮT ZOMBIE
+    const zombies = globalDetails.filter(u => {
+        const noTraffic = (parseInt(u.TrafficCurrent) || 0) === 0;
+        const noGscClicks = (parseInt(u.GSCClicks) || 0) === 0;
+        
+        const thinContent = (parseInt(u.WordCount) || 0) < 300;
+        const orphan = (parseInt(u.Inlinks) || 0) === 0;
+        const nonIndexable = String(u.Indexability).includes('Non');
+
+        // Bị dính: Không Traffic + (Nội dung mỏng HOẶC Mồ côi HOẶC Chặn Index)
+        return (noTraffic && noGscClicks) && (thinContent || orphan || nonIndexable);
+    });
+
+    if (zombies.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Chúc mừng! Website sạch bóng Zombie Pages.</div>`;
+        return;
+    }
+
+    let rows = zombies.map((u, i) => {
+        let reasons = [];
+        let actions = [];
+        
+        if ((parseInt(u.WordCount) || 0) < 300) {
+            reasons.push('<span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[9px] uppercase font-bold mb-1 inline-block">Nội dung mỏng</span>');
+            actions.push('Bổ sung thêm content hoặc Gộp với bài khác');
+        }
+        if ((parseInt(u.Inlinks) || 0) === 0) {
+            reasons.push('<span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[9px] uppercase font-bold mb-1 inline-block">Trang mồ côi</span>');
+            actions.push('Chèn Internal link từ trang chủ/chuyên mục');
+        }
+        if (String(u.Indexability).includes('Non')) {
+            reasons.push('<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[9px] uppercase font-bold inline-block">Bị chặn Index</span>');
+            actions.push('Kiểm tra thẻ noindex hoặc Xóa bỏ nếu không cần');
+        }
+
+        return `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-3 text-xs text-gray-400 font-bold">${i+1}</td>
+                <td class="p-3 text-xs">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block mb-1 break-all">${u.URL}</a>
+                    <div class="text-[10px] text-gray-500">${u.TieuDe}</div>
+                </td>
+                <td class="p-3">${reasons.join(' ')}</td>
+                <td class="p-3 text-[11px] text-purple-700 font-medium"><i class="fas fa-tools mr-1"></i>${actions.join(' <br> <i class="fas fa-tools mr-1"></i>')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('zombieTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-purple-800"><i class="fas fa-spider text-purple-500 mr-2"></i>Trạm Quét Zombie Pages <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${zombies.length} URL</span></h2>
+            <button class="bg-purple-600 hover:bg-purple-700 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="zombieTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
+            <div class="text-xs text-gray-500 mb-3 italic">* Zombie Pages là những trang mang lại 0 traffic, 0 click và vi phạm tiêu chuẩn chất lượng (Nội dung mỏng, Mồ côi link, hoặc Bị chặn index). Cần xử lý gấp để không tụt hạng toàn website.</div>
+            <table class="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-bold">
+                    <tr>
+                        <th class="p-3 w-10">STT</th>
+                        <th class="p-3">URL Thây ma</th>
+                        <th class="p-3 w-40">Nguyên nhân</th>
+                        <th class="p-3 w-64">AI Gợi ý xử lý</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -227,7 +304,7 @@ function renderCategoryAccordion() {
                                     if (u.WordCount < 500) seoScore -= 20;
                                     if (u.Inlinks < 2) seoScore -= 10;
                                     if (String(u.Indexability).includes('Non')) seoScore -= 50;
-                                    seoScore = Math.max(0, seoScore); // Không cho âm điểm
+                                    seoScore = Math.max(0, seoScore); 
                                     let scoreColor = seoScore >= 90 ? 'bg-green-500' : (seoScore >= 70 ? 'bg-orange-500' : 'bg-red-500');
                                     
                                     return `
@@ -254,7 +331,6 @@ function renderCategoryAccordion() {
                                                         <div class="flex justify-between"><span class="text-gray-500">CTR:</span> <b>${u.GSCCTR || '0%'}</b></div>
                                                     </div>
                                                 </div>
-                                                
                                             </td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-100 text-blue-700">${u.TrangThai}</span></td>
                                             <td class="p-3 text-center font-bold text-xs">${parseInt(u.TrafficCurrent).toLocaleString('vi-VN')}</td>
