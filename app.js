@@ -1,4 +1,8 @@
-// ĐIỀN LINK GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
+/**
+ * HỆ THỐNG DASHBOARD SEO HƯNG PHÁT SÀI GÒN - PHIÊN BẢN NỘI SOI TỔNG LỰC
+ * Bao gồm: KPI, Charts, Top Priority, Filters, và SEO Medical Audit
+ */
+
 const API_URL = "https://api-hungphatsaigon.hoangtuanvpro.workers.dev/";
 
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('vi-VN');
@@ -80,7 +84,7 @@ function initFilters() {
 }
 
 /**
- * 5. TẢI DỮ LIỆU TỪ API
+ * 5. TẢI DỮ LIỆU TỪ API VÀ CẬP NHẬT KPI
  */
 async function loadData() {
     const tbody = document.getElementById('categoryAccordionBody');
@@ -94,7 +98,7 @@ async function loadData() {
         const tq = data.tongQuan;
         globalDetails = Array.isArray(data.chiTiet) ? data.chiTiet : []; 
 
-        // Cập nhật KPI
+        // Cập nhật các chỉ số KPI trên Dashboard
         const total = parseInt(tq.tongUrl) || 0;
         document.getElementById('totalUrls').textContent = total;
         document.getElementById('totalCategories').textContent = tq.danhMuc || '0';
@@ -118,7 +122,7 @@ async function loadData() {
 }
 
 /**
- * 6. VẼ BIỂU ĐỒ
+ * 6. VẼ BIỂU ĐỒ (Dựa trên Topic và Trạng thái)
  */
 function renderAllCharts(total) {
     const catCounts = {};
@@ -163,7 +167,7 @@ function renderAllCharts(total) {
 }
 
 /**
- * 7. RENDER TOP 10 ƯU TIÊN
+ * 7. RENDER TOP 10 ƯU TIÊN (Các bài cần cập nhật gấp)
  */
 function renderTop10Priority() {
     let list = globalDetails.filter(i => ['outdated', 'stale'].includes(getNormalizedStatus(i.TrangThai)));
@@ -175,7 +179,7 @@ function renderTop10Priority() {
         const status = getNormalizedStatus(u.TrangThai);
         const badgeClass = status === 'outdated' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700';
         return `
-            <tr class="border-b border-gray-50 hover:bg-gray-50">
+            <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td class="px-3 py-3 text-gray-400 font-bold">${i + 1}</td>
                 <td class="px-3 py-3 text-xs text-blue-600 font-medium">${u.URL.replace('https://hungphatsaigon.vn/', '')}</td>
                 <td class="px-3 py-3 text-center text-gray-500 text-xs">${formatDisplayDate(u.NgayCapNhat)}</td>
@@ -194,6 +198,7 @@ function renderCategoryAccordion() {
     const statusVal = document.getElementById('statusFilter').value;
     const searchVal = document.getElementById('urlSearch').value.toLowerCase();
 
+    // Lọc dữ liệu theo Search và Bộ lọc
     const filtered = globalDetails.filter(item => {
         const mMain = !mainVal || item.DanhMucChinh === mainVal;
         const mSub = !subVal || item.DanhMucCon === subVal;
@@ -202,6 +207,7 @@ function renderCategoryAccordion() {
         return mMain && mSub && mStatus && mSearch;
     });
 
+    // Gom nhóm dữ liệu theo Danh mục
     const grouped = {};
     filtered.forEach(item => {
         const key = `${item.DanhMucChinh || 'Khác'}___${item.DanhMucCon || 'Chung'}`;
@@ -210,15 +216,22 @@ function renderCategoryAccordion() {
     });
 
     tbody.innerHTML = '';
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-medium">Không tìm thấy nội dung phù hợp.</td></tr>';
+        return;
+    }
+
     Object.keys(grouped).forEach((key, index) => {
         const g = grouped[key];
+        
+        // SẮP XẾP: Bài nhiều Traffic nhất lên đầu danh mục
         g.urls.sort((a, b) => (parseInt(b.TrafficCurrent) || 0) - (parseInt(a.TrafficCurrent) || 0));
         
         const rowId = 'cat-row-' + index;
         const totalInGroup = g.urls.length;
 
         let html = `
-            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer" onclick="toggleAccordion('${rowId}')">
+            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
                 <td class="px-4 py-4 font-bold text-gray-800 text-sm"><i class="fas fa-folder text-orange-400 mr-2"></i>${g.main}</td>
                 <td class="px-4 py-4 text-gray-500 font-bold text-xs">${g.sub}</td>
                 <td class="px-4 py-4 text-center font-black text-orange-600">${totalInGroup}</td>
@@ -228,7 +241,7 @@ function renderCategoryAccordion() {
                     <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">Chi tiết <i class="fas fa-chevron-right ml-1 transition-transform" id="icon-${rowId}"></i></button>
                 </td>
             </tr>
-            <tr id="${rowId}" class="hidden bg-gray-50/30">
+            <tr id="${rowId}" class="hidden bg-gray-50/30 border-b-2 border-orange-100">
                 <td colspan="6" class="p-4">
                     <div class="max-h-120 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm">
                         <table class="w-full text-left table-fixed">
@@ -249,9 +262,9 @@ function renderCategoryAccordion() {
                                     const cur = parseInt(u.TrafficCurrent) || 0;
                                     const last = parseInt(u.TrafficLast) || 0;
                                     const diff = cur - last;
-                                    let trendHtml = diff > 0 ? `<span class="text-green-600 font-bold">+${diff}</span>` : diff < 0 ? `<span class="text-red-600 font-bold">${diff}</span>` : `<span class="text-gray-300">--</span>`;
+                                    let trendHtml = diff > 0 ? `<span class="text-green-600 font-bold"><i class="fas fa-caret-up mr-1"></i>+${diff}</span>` : diff < 0 ? `<span class="text-red-600 font-bold"><i class="fas fa-caret-down mr-1"></i>${diff}</span>` : `<span class="text-gray-300">--</span>`;
 
-                                    // BIẾN NỘI SOI (SEO MEDICAL)
+                                    // LOGIC NỘI SOI: Cảnh báo màu sắc cho Technical SEO
                                     const isIndexable = String(u.Indexability).includes('Non') ? 'text-red-600 font-black' : 'text-green-600';
                                     const wordCountClass = u.WordCount < 500 ? 'text-orange-500 font-bold' : 'text-gray-700';
                                     const titleClass = (u.TitleLen > 60 || u.TitleLen < 30) ? 'text-red-500 font-bold' : 'text-gray-700';
@@ -264,7 +277,7 @@ function renderCategoryAccordion() {
                                                 
                                                 <div class="grid grid-cols-2 gap-3 mt-3 p-3 bg-gray-50 rounded border border-gray-100 shadow-sm">
                                                     <div class="text-[10px]">
-                                                        <div class="text-gray-400 uppercase font-bold mb-1">Tiêu đề (Title Tech)</div>
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Tiêu đề (Technical)</div>
                                                         <div class="${titleClass} leading-tight">${u.TitleTech} <span class="text-[9px] opacity-70">(${u.TitleLen} ký tự)</span></div>
                                                     </div>
                                                     <div class="text-[10px]">
@@ -272,18 +285,18 @@ function renderCategoryAccordion() {
                                                         <div class="${u.H1Tech === 'N/A' ? 'text-red-500' : 'text-gray-700'} leading-tight font-medium">${u.H1Tech}</div>
                                                     </div>
                                                     <div class="text-[10px]">
-                                                        <div class="text-gray-400 uppercase font-bold mb-1">Chất lượng nội dung</div>
-                                                        <div class="${wordCountClass}"><i class="fas fa-file-alt mr-1"></i>${u.WordCount.toLocaleString()} chữ</div>
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Độ dài nội dung</div>
+                                                        <div class="${wordCountClass}"><i class="fas fa-file-alt mr-1"></i>${parseInt(u.WordCount).toLocaleString()} chữ</div>
                                                     </div>
                                                     <div class="text-[10px]">
-                                                        <div class="text-gray-400 uppercase font-bold mb-1">Internal SEO</div>
+                                                        <div class="text-gray-400 uppercase font-bold mb-1">Internal SEO & Index</div>
                                                         <div class="text-blue-600 font-bold"><i class="fas fa-link mr-1"></i>${u.Inlinks} Inlinks | <span class="${isIndexable}">${u.Indexability}</span></div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${badge}">${u.TrangThai}</span></td>
                                             <td class="p-3 text-center"><span class="text-xs font-black text-gray-700">${cur.toLocaleString()}</span></td>
-                                            <td class="p-3 text-center text-[10px]">${trendHtml}</td>
+                                            <td class="p-3 text-center text-[10px] transition-all hover:scale-110">${trendHtml}</td>
                                         </tr>`;
                                 }).join('')}
                             </tbody>
@@ -295,6 +308,9 @@ function renderCategoryAccordion() {
     });
 }
 
+/**
+ * 9. ĐIỀU KHIỂN ĐÓNG MỞ ACCORDION
+ */
 function toggleAccordion(id) {
     const r = document.getElementById(id);
     const i = document.getElementById('icon-' + id);
@@ -307,4 +323,5 @@ function toggleAccordion(id) {
     }
 }
 
+// KHỞI CHẠY HỆ THỐNG
 loadData();
