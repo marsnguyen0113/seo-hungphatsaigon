@@ -84,7 +84,7 @@ function initFilters() {
  */
 async function loadData() {
     const tbody = document.getElementById('categoryAccordionBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang tải dữ liệu...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang kết nối dữ liệu Hưng Phát Sài Gòn...</td></tr>';
 
     try {
         const response = await fetch(API_URL);
@@ -113,7 +113,7 @@ async function loadData() {
 
     } catch (error) {
         console.error('Lỗi hệ thống:', error);
-        tbody.innerHTML = `<tr class="bg-red-50"><td colspan="6" class="text-center py-8 text-red-600 font-bold border-red-200 border">LỖI: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr class="bg-red-50"><td colspan="6" class="text-center py-8 text-red-600 font-bold border-red-200 border">LỖI KẾT NỐI: ${error.message}</td></tr>`;
     }
 }
 
@@ -172,7 +172,7 @@ function renderTop10Priority() {
     
     const tbody = document.getElementById('priorityUrlsTable');
     if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-green-600 font-bold">Website hoạt động tốt!</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-green-600 font-bold">Website đang ở trạng thái lý tưởng!</td></tr>';
         return;
     }
 
@@ -181,7 +181,7 @@ function renderTop10Priority() {
 
     tbody.innerHTML = list.slice(0, 10).map((u, i) => {
         const status = getNormalizedStatus(u.TrangThai);
-        const badgeClass = status === 'outdated' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700';
+        const badgeClass = status === 'outdated' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-orange-100 text-orange-700 border border-orange-200';
         let daysText = "N/A";
         const updateDate = parseDate(u.NgayCapNhat);
         if (updateDate) {
@@ -190,7 +190,7 @@ function renderTop10Priority() {
             daysText = `${diffDays} ngày`;
         }
         return `
-            <tr class="border-b border-gray-50 hover:bg-gray-50">
+            <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td class="px-3 py-3 text-gray-400 font-bold">${i + 1}</td>
                 <td class="px-3 py-3 text-xs break-all text-blue-600 font-medium">${u.URL.replace('https://hungphatsaigon.vn/', '')}</td>
                 <td class="px-3 py-3 text-center text-gray-500 text-xs">${formatDisplayDate(u.NgayCapNhat)}</td>
@@ -200,7 +200,7 @@ function renderTop10Priority() {
 }
 
 /**
- * 8. RENDER BẢNG ACCORDION - PHIÊN BẢN TRAFFIC
+ * 8. RENDER BẢNG ACCORDION - PHIÊN BẢN TRAFFIC SO SÁNH (FINAL)
  */
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
@@ -226,7 +226,7 @@ function renderCategoryAccordion() {
 
     tbody.innerHTML = '';
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-400">Không có dữ liệu.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-400 font-medium">Không tìm thấy nội dung phù hợp yêu cầu lọc.</td></tr>';
         return;
     }
 
@@ -236,43 +236,67 @@ function renderCategoryAccordion() {
         const totalInGroup = g.urls.length;
 
         let html = `
-            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer" onclick="toggleAccordion('${rowId}')">
+            <tr class="border-b border-gray-100 hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
                 <td class="px-4 py-4 font-bold text-gray-800 text-sm"><i class="fas fa-folder text-orange-400 mr-2"></i>${g.main}</td>
                 <td class="px-4 py-4 text-gray-500 font-bold text-xs">${g.sub}</td>
                 <td class="px-4 py-4 text-center font-black text-orange-600">${totalInGroup}</td>
                 <td class="px-4 py-4 text-center text-gray-400 text-xs">${((totalInGroup / (globalDetails.length || 1)) * 100).toFixed(1)}%</td>
-                <td class="px-4 py-4 text-center text-gray-500 text-xs">--/--/----</td>
+                <td class="px-4 py-4 text-center text-gray-500 text-xs font-bold">---</td>
                 <td class="px-4 py-4 text-center">
-                    <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold">Chi tiết <i class="fas fa-chevron-right ml-1" id="icon-${rowId}"></i></button>
+                    <button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">
+                        Chi tiết <i class="fas fa-chevron-right ml-1 transition-transform" id="icon-${rowId}"></i>
+                    </button>
                 </td>
             </tr>
-            <tr id="${rowId}" class="hidden bg-gray-50/30">
+            <tr id="${rowId}" class="hidden bg-gray-50/30 border-b-2 border-orange-100">
                 <td colspan="6" class="p-4">
-                    <div class="max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                    <div class="max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-inner">
                         <table class="w-full text-left">
-                            <thead class="bg-gray-50 font-bold text-[10px] text-gray-400 uppercase sticky top-0">
-                                <tr><th class="p-3">STT</th><th class="p-3">URL</th><th class="p-3 text-center">Cập nhật</th><th class="p-3 text-center">Trạng thái</th><th class="p-3 text-center">Kỹ thuật</th><th class="p-3 text-center">Traffic (30d)</th></tr>
+                            <thead class="bg-gray-100 font-bold text-[10px] text-gray-400 uppercase sticky top-0 z-10">
+                                <tr>
+                                    <th class="p-3">STT</th>
+                                    <th class="p-3">URL</th>
+                                    <th class="p-3 text-center">Trạng thái</th>
+                                    <th class="p-3 text-center">Kỹ thuật</th>
+                                    <th class="p-3 text-center">Tháng này</th>
+                                    <th class="p-3 text-center">Tháng trước</th>
+                                    <th class="p-3 text-center">Xu hướng</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 ${g.urls.map((u, i) => {
                                     const n = getNormalizedStatus(u.TrangThai);
                                     const badge = n === 'fresh' ? 'bg-green-100 text-green-700' : n === 'recent' ? 'bg-blue-100 text-blue-700' : n === 'stale' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
-                                    const techClass = (u.LoiKyThuat === "OK") ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                                    const techClass = (u.LoiKyThuat === "OK") ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200';
                                     
-                                    // Logic Badge cho Traffic
-                                    const traffic = parseInt(u.Traffic) || 0;
-                                    let trafficClass = 'text-gray-400';
-                                    if (traffic >= 100) trafficClass = 'bg-green-500 text-white px-2 py-0.5 rounded-full font-black';
-                                    else if (traffic > 0) trafficClass = 'text-blue-600 font-bold';
+                                    // Logic So sánh Traffic
+                                    const cur = parseInt(u.TrafficCurrent) || 0;
+                                    const last = parseInt(u.TrafficLast) || 0;
+                                    const diff = cur - last;
+
+                                    let trendHtml = '';
+                                    if (diff > 0) {
+                                        trendHtml = `<span class="text-green-600 font-bold"><i class="fas fa-caret-up mr-1"></i>+${diff.toLocaleString()}</span>`;
+                                    } else if (diff < 0) {
+                                        trendHtml = `<span class="text-red-600 font-bold"><i class="fas fa-caret-down mr-1"></i>${diff.toLocaleString()}</span>`;
+                                    } else {
+                                        trendHtml = `<span class="text-gray-400">--</span>`;
+                                    }
+
+                                    // Highlight cho bài viết Hot (Tháng này > 100 view)
+                                    const curClass = cur >= 100 ? 'bg-green-500 text-white px-2 py-0.5 rounded-full font-black shadow-sm' : 'font-bold text-gray-700';
 
                                     return `
-                                        <tr class="border-b border-gray-50">
+                                        <tr class="border-b border-gray-50 hover:bg-gray-50/50">
                                             <td class="p-3 text-xs font-bold text-gray-300">${i+1}</td>
-                                            <td class="p-3"><a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] break-all hover:underline">${u.URL}</a></td>
-                                            <td class="p-3 text-center text-[10px] font-bold text-gray-500">${formatDisplayDate(u.NgayCapNhat)}</td>
+                                            <td class="p-3">
+                                                <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] break-all hover:underline leading-relaxed">${u.URL}</a>
+                                            </td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${badge}">${u.TrangThai}</span></td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded border text-[9px] font-black uppercase ${techClass}">${u.LoiKyThuat}</span></td>
-                                            <td class="p-3 text-center text-xs"><span class="${trafficClass}">${traffic.toLocaleString('vi-VN')}</span></td>
+                                            <td class="p-3 text-center text-xs"><span class="${curClass}">${cur.toLocaleString('vi-VN')}</span></td>
+                                            <td class="p-3 text-center text-xs text-gray-400 font-medium">${last.toLocaleString('vi-VN')}</td>
+                                            <td class="p-3 text-center text-[10px]">${trendHtml}</td>
                                         </tr>`;
                                 }).join('')}
                             </tbody>
@@ -287,8 +311,14 @@ function renderCategoryAccordion() {
 function toggleAccordion(id) {
     const r = document.getElementById(id);
     const i = document.getElementById('icon-' + id);
-    if(r.classList.contains('hidden')) { r.classList.remove('hidden'); i.classList.add('rotate-90'); }
-    else { r.classList.add('hidden'); i.classList.remove('rotate-90'); }
+    if(r.classList.contains('hidden')) {
+        r.classList.remove('hidden');
+        i.style.transform = 'rotate(90deg)';
+    } else {
+        r.classList.add('hidden');
+        i.style.transform = 'rotate(0deg)';
+    }
 }
 
+// KHỞI CHẠY
 loadData();
