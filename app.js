@@ -5,12 +5,12 @@ document.getElementById('currentDate').textContent = new Date().toLocaleDateStri
 let globalDetails = [];
 let charts = {};
 let rankTrackingData = []; 
-let canniData = []; // BIẾN CHỨA DỮ LIỆU CANNIBALIZATION
+let canniData = []; 
 
-// BIẾN CHO PHÂN TRANG
+// BIẾN QUẢN LÝ PHÂN TRANG
 let currentFilteredGroups = [];
 let currentPage = 1;
-const ITEMS_PER_PAGE = 50;
+const ITEMS_PER_PAGE = 20; // Hiển thị 20 danh mục mỗi trang để load mượt nhất
 
 function formatDisplayDate(dateStr) {
     const d = parseDate(dateStr);
@@ -105,7 +105,8 @@ async function loadData() {
         renderZombieTool(); 
         
         initFilters();
-        processFilters(); // Gọi hàm xử lý lọc và render trang đầu
+        // Gọi hàm xử lý lọc thay vì render trực tiếp
+        processFilters(); 
     } catch (e) { 
         console.error("LỖI HỆ THỐNG:", e); 
         tbody.innerHTML = `
@@ -560,7 +561,7 @@ function renderZombieTool() {
     `;
 }
 
-// HÀM XỬ LÝ LỌC & GỌI PHÂN TRANG
+// HÀM MỚI: XỬ LÝ LỌC & GỌI PHÂN TRANG
 function processFilters() {
     const mainVal = document.getElementById('mainCatFilter').value;
     const subVal = document.getElementById('subCatFilter').value;
@@ -582,20 +583,20 @@ function processFilters() {
         grouped[key].urls.push(item);
     });
 
-    // Chuyển grouped object thành mảng để phân trang
+    // Cập nhật mảng hiện tại cho phân trang
     currentFilteredGroups = Object.keys(grouped).map(key => grouped[key]);
     
-    // Sắp xếp các nhóm dựa trên tổng traffic
     currentFilteredGroups.sort((a, b) => {
         let totalA = a.urls.reduce((sum, u) => sum + (parseInt(u.TrafficCurrent)||0), 0);
         let totalB = b.urls.reduce((sum, u) => sum + (parseInt(u.TrafficCurrent)||0), 0);
         return totalB - totalA;
     });
 
+    // Gọi hàm render bảng dựa trên biến currentPage
     renderCategoryAccordion();
 }
 
-// HÀM RENDER DANH SÁCH THEO TRANG
+// RENDER BẢNG THEO SỐ TRANG
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
     tbody.innerHTML = '';
@@ -608,7 +609,7 @@ function renderCategoryAccordion() {
     const groupsToRender = currentFilteredGroups.slice(startIndex, endIndex);
 
     if (groupsToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy dữ liệu phù hợp với bộ lọc.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy dữ liệu.</td></tr>`;
         renderPaginationControls(totalPages);
         return;
     }
@@ -700,17 +701,10 @@ function renderCategoryAccordion() {
     renderPaginationControls(totalPages);
 }
 
-// HÀM VẼ THANH ĐIỀU HƯỚNG TRANG
+// HÀM VẼ NÚT BẤM CHUYỂN TRANG
 function renderPaginationControls(totalPages) {
     let paginationContainer = document.getElementById('paginationControls');
-    
-    if (!paginationContainer) {
-        const wrapper = document.getElementById('categoryAccordionBody').closest('table');
-        paginationContainer = document.createElement('div');
-        paginationContainer.id = 'paginationControls';
-        paginationContainer.className = 'py-4 flex justify-center items-center gap-2 bg-white border-t border-gray-100';
-        wrapper.parentNode.insertBefore(paginationContainer, wrapper.nextSibling);
-    }
+    if (!paginationContainer) return;
 
     if (totalPages <= 1) {
         paginationContainer.innerHTML = '';
@@ -720,15 +714,14 @@ function renderPaginationControls(totalPages) {
     let buttons = '';
     
     // Nút Trang trước
-    buttons += `<button onclick="changePage(${currentPage - 1})" class="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm font-bold" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+    buttons += `<button onclick="changePage(${currentPage - 1})" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-orange-50 disabled:opacity-50 text-sm font-bold transition-colors" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
 
-    // Các trang số (Hiển thị giới hạn trang xung quanh trang hiện tại để không bị quá dài)
     for (let i = 1; i <= totalPages; i++) {
         if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
             if (i === currentPage) {
-                buttons += `<button class="px-3 py-1 rounded bg-orange-500 text-white font-bold shadow-sm text-sm">${i}</button>`;
+                buttons += `<button class="px-4 py-2 rounded-lg bg-orange-500 text-white font-bold shadow-md text-sm">${i}</button>`;
             } else {
-                buttons += `<button onclick="changePage(${i})" class="px-3 py-1 rounded border border-gray-200 text-gray-700 hover:bg-orange-50 transition-colors text-sm">${i}</button>`;
+                buttons += `<button onclick="changePage(${i})" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors text-sm font-semibold">${i}</button>`;
             }
         } else if (i === currentPage - 3 || i === currentPage + 3) {
             buttons += `<span class="px-2 text-gray-400">...</span>`;
@@ -736,17 +729,16 @@ function renderPaginationControls(totalPages) {
     }
 
     // Nút Trang sau
-    buttons += `<button onclick="changePage(${currentPage + 1})" class="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm font-bold" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+    buttons += `<button onclick="changePage(${currentPage + 1})" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-orange-50 disabled:opacity-50 text-sm font-bold transition-colors" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
 
     paginationContainer.innerHTML = buttons;
 }
 
-// HÀM CHUYỂN TRANG
+// HÀM LẮNG NGHE KHI BẤM CHUYỂN TRANG
 function changePage(page) {
     currentPage = page;
     renderCategoryAccordion();
-    // Tự động cuộn lên đầu bảng danh mục
-    document.getElementById('categoryAccordionBody').closest('.bg-white').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('categoryAccordionBody').closest('.bg-white').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function toggleAccordion(id) {
