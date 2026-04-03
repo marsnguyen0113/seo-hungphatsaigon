@@ -19,7 +19,7 @@
                         <i class="fas fa-sitemap text-orange-400"></i>
                         Dashboard Phân Tích Sitemap & Nội Dung
                     </h1>
-                    <p class="text-gray-300 mt-2 text-sm lg:text-base mt-2 text-sm lg:text-base font-medium">
+                    <p class="text-gray-300 mt-2 text-sm lg:text-base font-medium">
                         <i class="fas fa-clock mr-2"></i>Cập nhật: <span id="currentDate">--/--/----</span> | 
                         <i class="fas fa-user ml-2 mr-2"></i>Phân tích bởi 
                         <span class="font-bold border-b-2 border-orange-800/30">Team SEO Hưng Phát</span>
@@ -146,33 +146,35 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 overflow-hidden">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">
-                <h2 class="text-xl font-black text-gray-800 flex items-center">
-                    <i class="fas fa-table text-orange-600 mr-3"></i>Phân Tích Chi Tiết Theo Danh Mục
-                </h2>
-                
-                <div class="flex flex-wrap items-center gap-2">
-                    <select id="mainCatFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
-                        <option value="">Tất cả danh mục chính</option>
-                    </select>
-                    <select id="subCatFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
-                        <option value="">Tất cả danh mục con</option>
-                    </select>
-                    <select id="statusFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="fresh">Mới</option>
-                        <option value="recent">Gần đây</option>
-                        <option value="stale">Cần xem xét</option>
-                        <option value="outdated">Lỗi thời</option>
-                    </select>
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                        <input type="text" id="urlSearch" placeholder="Tìm kiếm URL..." class="border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:ring-2 focus:ring-orange-500 outline-none w-40">
+        <div class="bg-white rounded-xl shadow-lg mb-8 overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <h2 class="text-xl font-black text-gray-800 flex items-center">
+                        <i class="fas fa-table text-orange-600 mr-3"></i>Phân Tích Chi Tiết Theo Danh Mục
+                    </h2>
+                    
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="mainCatFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
+                            <option value="">Tất cả danh mục chính</option>
+                        </select>
+                        <select id="subCatFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
+                            <option value="">Tất cả danh mục con</option>
+                        </select>
+                        <select id="statusFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="fresh">Mới</option>
+                            <option value="recent">Gần đây</option>
+                            <option value="stale">Cần xem xét</option>
+                            <option value="outdated">Lỗi thời</option>
+                        </select>
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                            <input type="text" id="urlSearch" placeholder="Tìm kiếm URL..." class="border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-xs font-medium focus:ring-2 focus:ring-orange-500 outline-none w-40">
+                        </div>
+                        <button id="resetFilterBtn" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                            <i class="fas fa-undo"></i> Đặt lại
+                        </button>
                     </div>
-                    <button id="resetFilterBtn" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
-                        <i class="fas fa-undo"></i> Đặt lại
-                    </button>
                 </div>
             </div>
 
@@ -189,30 +191,11 @@
                         </tr>
                     </thead>
                     <tbody id="categoryAccordionBody">
-                        <tr><td colspan="6" class="text-center py-16 text-gray-400"><i class="fas fa-spinner fa-spin fa-2x mb-3 block"></i>Đang khởi tạo bảng dữ liệu...</td></tr>
+                        <tr><td colspan="6" class="text-center py-16 text-gray-400"><i class="fas fa-spinner fa-spin fa-2x mb-3 block"></i>Đang tải dữ liệu từ Google...</td></tr>
                     </tbody>
                 </table>
-                <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50 border-b-2 border-gray-200">
-                        <tr>
-                            <th class="px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-widest">Danh Mục Chính</th>
-                            <th class="px-4 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-widest">Danh Mục Con</th>
-                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">Số URL</th>
-                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">% Tổng</th>
-                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">Cập nhật gần nhất</th>
-                            <th class="px-4 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-widest">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody id="categoryAccordionBody">
-                        <tr><td colspan="6" class="text-center py-16 text-gray-400"><i class="fas fa-spinner fa-spin fa-2x mb-3 block"></i>Đang khởi tạo bảng dữ liệu...</td></tr>
-                    </tbody>
-                </table>
-                
-                <div id="paginationControls" class="py-6 flex justify-center items-center gap-2 bg-white border-t border-gray-100"></div>
-
             </div>
-            </div>
+            <div id="paginationControls" class="p-4 flex justify-center items-center gap-2 bg-gray-50 border-t border-gray-200"></div>
         </div>
 
         <div class="bg-gradient-to-r from-orange-600 to-amber-500 rounded-xl shadow-lg p-8 mb-8 text-white">
