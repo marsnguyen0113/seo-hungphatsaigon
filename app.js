@@ -87,7 +87,10 @@ async function loadData() {
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
-        renderCannibalizationTool(); // KÍCH HOẠT RADAR ĂN THỊT
+        
+        // KÍCH HOẠT RADAR ĂN THỊT TỪ KHÓA (BẢN FIX LỖI TOC #)
+        renderCannibalizationTool(); 
+        
         renderMoneyPagesTool(); 
         renderContentDecayTool(); 
         renderZombieTool(); 
@@ -200,7 +203,7 @@ function renderRankTracking() {
 }
 
 /**
- * THUẬT TOÁN MỚI: PHÁT HIỆN ĂN THỊT TỪ KHÓA (CANNIBALIZATION)
+ * THUẬT TOÁN MỚI: PHÁT HIỆN ĂN THỊT TỪ KHÓA (CANNIBALIZATION) - ĐÃ FIX LỖI TOC #
  */
 function renderCannibalizationTool() {
     let container = document.getElementById('canniToolContainer');
@@ -217,30 +220,54 @@ function renderCannibalizationTool() {
         return;
     }
 
-    // Nhóm theo Keyword
+    // BƯỚC 1: LỌC BỎ THẺ H2 (#) VÀ GỘP SỨC MẠNH VỀ URL GỐC
     let groups = {};
     canniData.forEach(row => {
         let kw = String(row.Keyword).trim().toLowerCase();
-        if (!groups[kw]) groups[kw] = [];
-        groups[kw].push(row);
+        let rawUrl = String(row.URL).trim();
+        // Cắt đứt toàn bộ phần đuôi TOC (#...)
+        let cleanUrl = rawUrl.split('#')[0];
+
+        if (!groups[kw]) groups[kw] = {};
+
+        if (!groups[kw][cleanUrl]) {
+            groups[kw][cleanUrl] = {
+                URL: cleanUrl,
+                Clicks: 0,
+                Impressions: 0,
+                minPos: parseFloat(row.Position) || 100,
+                Position: parseFloat(row.Position) || 100
+            };
+        }
+
+        // Cộng dồn Clicks và Impressions của URL gốc + tất cả URL con chứa #
+        groups[kw][cleanUrl].Clicks += parseInt(row.Clicks) || 0;
+        groups[kw][cleanUrl].Impressions += parseInt(row.Impressions) || 0;
+        
+        // Lấy vị trí tốt nhất làm đại diện
+        let pos = parseFloat(row.Position) || 100;
+        if (pos < groups[kw][cleanUrl].minPos) {
+            groups[kw][cleanUrl].minPos = pos;
+            groups[kw][cleanUrl].Position = pos;
+        }
     });
 
-    // Lọc ra các nhóm bị "ăn thịt" (>= 2 URLs tranh nhau)
+    // BƯỚC 2: TÌM CÁC URL GỐC ĐANG XUNG ĐỘT (SAU KHI ĐÃ LỌC SẠCH)
     let cannibalized = [];
     for (let kw in groups) {
-        let urls = groups[kw];
-        // Bỏ qua các URL quá yếu để tránh báo động giả
-        let activeUrls = urls.filter(u => (parseInt(u.Impressions) > 10 || parseInt(u.Clicks) > 0));
+        let urlsObj = groups[kw];
+        // Chỉ lấy các URL gốc có tương tác để tránh rác
+        let activeUrls = Object.values(urlsObj).filter(u => u.Impressions > 10 || u.Clicks > 0);
         
-        if (activeUrls.length > 1) {
+        if (activeUrls.length > 1) { 
             activeUrls.sort((a, b) => {
-                let diff = (parseInt(b.Clicks) || 0) - (parseInt(a.Clicks) || 0);
+                let diff = b.Clicks - a.Clicks;
                 if (diff !== 0) return diff;
-                return (parseInt(b.Impressions) || 0) - (parseInt(a.Impressions) || 0);
+                return b.Impressions - a.Impressions;
             });
             
-            let totalClicks = activeUrls.reduce((sum, u) => sum + (parseInt(u.Clicks) || 0), 0);
-            let totalImp = activeUrls.reduce((sum, u) => sum + (parseInt(u.Impressions) || 0), 0);
+            let totalClicks = activeUrls.reduce((sum, u) => sum + u.Clicks, 0);
+            let totalImp = activeUrls.reduce((sum, u) => sum + u.Impressions, 0);
             
             cannibalized.push({ keyword: kw, urls: activeUrls, totalClicks: totalClicks, totalImp: totalImp });
         }
