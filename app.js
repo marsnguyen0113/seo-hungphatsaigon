@@ -7,6 +7,11 @@ let charts = {};
 let rankTrackingData = []; 
 let canniData = []; // BIẾN CHỨA DỮ LIỆU CANNIBALIZATION
 
+// BIẾN CHO PHÂN TRANG
+let currentFilteredGroups = [];
+let currentPage = 1;
+const ITEMS_PER_PAGE = 50;
+
 function formatDisplayDate(dateStr) {
     const d = parseDate(dateStr);
     if (!d || isNaN(d)) return 'N/A';
@@ -47,12 +52,19 @@ function initFilters() {
     const subCats = [...new Set(globalDetails.map(item => item.DanhMucCon || 'Chung'))].sort();
     mainSelect.innerHTML = '<option value="">Tất cả danh mục chính</option>' + mainCats.map(c => `<option value="${c}">${c}</option>`).join('');
     subSelect.innerHTML = '<option value="">Tất cả danh mục con</option>' + subCats.map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    // Gắn sự kiện khi filter thay đổi -> reset về trang 1
     ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => {
-        document.getElementById(id).addEventListener('input', renderCategoryAccordion);
+        document.getElementById(id).addEventListener('input', () => {
+            currentPage = 1;
+            processFilters();
+        });
     });
+
     document.getElementById('resetFilterBtn').onclick = () => {
         ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => document.getElementById(id).value = '');
-        renderCategoryAccordion();
+        currentPage = 1;
+        processFilters();
     };
 }
 
@@ -74,7 +86,7 @@ async function loadData() {
 
         globalDetails = data.chiTiet || [];
         rankTrackingData = data.rankTracking || []; 
-        canniData = data.cannibalization || []; // NHẬN DATA CANNIBALIZATION TỪ API
+        canniData = data.cannibalization || []; 
         
         const tq = data.tongQuan;
         
@@ -87,15 +99,13 @@ async function loadData() {
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
-        
-        // KÍCH HOẠT RADAR ĂN THỊT TỪ KHÓA (BẢN FIX LỖI TOC #)
         renderCannibalizationTool(); 
-        
         renderMoneyPagesTool(); 
         renderContentDecayTool(); 
         renderZombieTool(); 
-        renderCategoryAccordion();
+        
         initFilters();
+        processFilters(); // Gọi hàm xử lý lọc và render trang đầu
     } catch (e) { 
         console.error("LỖI HỆ THỐNG:", e); 
         tbody.innerHTML = `
@@ -185,9 +195,9 @@ function renderRankTracking() {
         <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex justify-between items-center">
             <h2 class="text-lg font-black text-gray-800"><i class="fas fa-trophy text-yellow-500 mr-2"></i>Radar Từ Khóa (Rank Tracking Pro)</h2>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto max-h-96">
             <table class="w-full text-left">
-                <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase font-bold">
+                <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase font-bold sticky top-0 z-10">
                     <tr>
                         <th class="p-3">Từ khóa mục tiêu</th>
                         <th class="p-3 text-center">Clicks</th>
@@ -202,9 +212,6 @@ function renderRankTracking() {
     `;
 }
 
-/**
- * THUẬT TOÁN MỚI: PHÁT HIỆN ĂN THỊT TỪ KHÓA (CANNIBALIZATION) - ĐÃ FIX LỖI TOC #
- */
 function renderCannibalizationTool() {
     let container = document.getElementById('canniToolContainer');
     if (!container) {
@@ -220,12 +227,10 @@ function renderCannibalizationTool() {
         return;
     }
 
-    // BƯỚC 1: LỌC BỎ THẺ H2 (#) VÀ GỘP SỨC MẠNH VỀ URL GỐC
     let groups = {};
     canniData.forEach(row => {
         let kw = String(row.Keyword).trim().toLowerCase();
         let rawUrl = String(row.URL).trim();
-        // Cắt đứt toàn bộ phần đuôi TOC (#...)
         let cleanUrl = rawUrl.split('#')[0];
 
         if (!groups[kw]) groups[kw] = {};
@@ -240,11 +245,9 @@ function renderCannibalizationTool() {
             };
         }
 
-        // Cộng dồn Clicks và Impressions của URL gốc + tất cả URL con chứa #
         groups[kw][cleanUrl].Clicks += parseInt(row.Clicks) || 0;
         groups[kw][cleanUrl].Impressions += parseInt(row.Impressions) || 0;
         
-        // Lấy vị trí tốt nhất làm đại diện
         let pos = parseFloat(row.Position) || 100;
         if (pos < groups[kw][cleanUrl].minPos) {
             groups[kw][cleanUrl].minPos = pos;
@@ -252,11 +255,9 @@ function renderCannibalizationTool() {
         }
     });
 
-    // BƯỚC 2: TÌM CÁC URL GỐC ĐANG XUNG ĐỘT (SAU KHI ĐÃ LỌC SẠCH)
     let cannibalized = [];
     for (let kw in groups) {
         let urlsObj = groups[kw];
-        // Chỉ lấy các URL gốc có tương tác để tránh rác
         let activeUrls = Object.values(urlsObj).filter(u => u.Impressions > 10 || u.Clicks > 0);
         
         if (activeUrls.length > 1) { 
@@ -273,7 +274,6 @@ function renderCannibalizationTool() {
         }
     }
 
-    // Ưu tiên hiển thị lỗi mất Clicks cao nhất lên đầu
     cannibalized.sort((a, b) => b.totalClicks - a.totalClicks || b.totalImp - a.totalImp);
     cannibalized = cannibalized.slice(0, 20);
 
@@ -315,7 +315,7 @@ function renderCannibalizationTool() {
             <button class="bg-gray-600 hover:bg-gray-500 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="canniTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
-            <div class="text-xs text-gray-600 mb-3 italic">* Cảnh báo: Các URL bên dưới đang tự cạnh tranh nhau trên kết quả tìm kiếm cho cùng 1 từ khóa khiến rớt hạng. Bạn cần chọn ra 1 URL chính (Đang Top), và xử lý các URL còn lại (Gộp bài hoặc Cắm Canonical trỏ về bài chính).</div>
+            <div class="text-xs text-gray-600 mb-3 italic">* Cảnh báo: Các URL bên dưới đang tự cạnh tranh nhau trên kết quả tìm kiếm cho cùng 1 từ khóa. Cần chọn ra 1 URL chính và xử lý các URL phụ.</div>
             <table class="w-full text-left bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-gray-200 text-[10px] text-gray-700 uppercase font-black">
                     <tr>
@@ -390,7 +390,6 @@ function renderMoneyPagesTool() {
             <button class="bg-yellow-500 hover:bg-yellow-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="moneyTableArea" class="hidden overflow-x-auto p-4 bg-yellow-50/30">
-            <div class="text-xs text-yellow-800 mb-3 italic">* Các bài viết có chuyển đổi hoặc thời gian đọc > 120s. <b>Tuyệt đối không xóa/đổi URL các trang này.</b></div>
             <table class="w-full text-left bg-white border border-yellow-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-yellow-100/50 text-[10px] text-yellow-800 uppercase font-black">
                     <tr>
@@ -434,7 +433,7 @@ function renderContentDecayTool() {
     });
 
     if (decayingPages.length === 0) {
-        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-shield-alt mr-2"></i>Phong độ ổn định! Không có bài viết nào bị sụt giảm Traffic nghiêm trọng (>30%).</div>`;
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-shield-alt mr-2"></i>Phong độ ổn định! Không có bài viết bị tụt hạng nặng.</div>`;
         return;
     }
 
@@ -468,7 +467,6 @@ function renderContentDecayTool() {
             <button class="bg-red-500 hover:bg-red-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="decayTableArea" class="hidden overflow-x-auto p-4 bg-red-50/30">
-            <div class="text-xs text-red-800 mb-3 italic">* Các bài viết từng có lượng truy cập tốt (>20 views) nhưng tháng này bị <b>sụt giảm nặng nề hơn 30%</b>. Cần bổ sung thông tin, cập nhật title hoặc chèn Internal link gấp để kéo lại Top.</div>
             <table class="w-full text-left bg-white border border-red-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-red-100/50 text-[10px] text-red-800 uppercase font-black">
                     <tr>
@@ -547,7 +545,6 @@ function renderZombieTool() {
             <button class="bg-purple-600 hover:bg-purple-700 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="zombieTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
-            <div class="text-xs text-gray-500 mb-3 italic">* Zombie Pages là những trang mang lại 0 traffic, 0 click và vi phạm tiêu chuẩn chất lượng (Nội dung mỏng, Mồ côi link, hoặc Bị chặn index). Cần xử lý gấp để không tụt hạng toàn website.</div>
             <table class="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-bold">
                     <tr>
@@ -563,8 +560,8 @@ function renderZombieTool() {
     `;
 }
 
-function renderCategoryAccordion() {
-    const tbody = document.getElementById('categoryAccordionBody');
+// HÀM XỬ LÝ LỌC & GỌI PHÂN TRANG
+function processFilters() {
     const mainVal = document.getElementById('mainCatFilter').value;
     const subVal = document.getElementById('subCatFilter').value;
     const statusVal = document.getElementById('statusFilter').value;
@@ -585,11 +582,40 @@ function renderCategoryAccordion() {
         grouped[key].urls.push(item);
     });
 
+    // Chuyển grouped object thành mảng để phân trang
+    currentFilteredGroups = Object.keys(grouped).map(key => grouped[key]);
+    
+    // Sắp xếp các nhóm dựa trên tổng traffic
+    currentFilteredGroups.sort((a, b) => {
+        let totalA = a.urls.reduce((sum, u) => sum + (parseInt(u.TrafficCurrent)||0), 0);
+        let totalB = b.urls.reduce((sum, u) => sum + (parseInt(u.TrafficCurrent)||0), 0);
+        return totalB - totalA;
+    });
+
+    renderCategoryAccordion();
+}
+
+// HÀM RENDER DANH SÁCH THEO TRANG
+function renderCategoryAccordion() {
+    const tbody = document.getElementById('categoryAccordionBody');
     tbody.innerHTML = '';
-    Object.keys(grouped).forEach((key, index) => {
-        const g = grouped[key];
+
+    const totalPages = Math.ceil(currentFilteredGroups.length / ITEMS_PER_PAGE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const groupsToRender = currentFilteredGroups.slice(startIndex, endIndex);
+
+    if (groupsToRender.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy dữ liệu phù hợp với bộ lọc.</td></tr>`;
+        renderPaginationControls(totalPages);
+        return;
+    }
+
+    groupsToRender.forEach((g, index) => {
         g.urls.sort((a,b) => (parseInt(b.TrafficCurrent)||0) - (parseInt(a.TrafficCurrent)||0));
-        const rowId = 'cat-row-' + index;
+        const rowId = 'cat-row-' + (startIndex + index);
 
         tbody.insertAdjacentHTML('beforeend', `
             <tr class="border-b hover:bg-orange-50 cursor-pointer" onclick="toggleAccordion('${rowId}')">
@@ -670,6 +696,57 @@ function renderCategoryAccordion() {
                 </td>
             </tr>`);
     });
+
+    renderPaginationControls(totalPages);
+}
+
+// HÀM VẼ THANH ĐIỀU HƯỚNG TRANG
+function renderPaginationControls(totalPages) {
+    let paginationContainer = document.getElementById('paginationControls');
+    
+    if (!paginationContainer) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('table');
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'paginationControls';
+        paginationContainer.className = 'py-4 flex justify-center items-center gap-2 bg-white border-t border-gray-100';
+        wrapper.parentNode.insertBefore(paginationContainer, wrapper.nextSibling);
+    }
+
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    let buttons = '';
+    
+    // Nút Trang trước
+    buttons += `<button onclick="changePage(${currentPage - 1})" class="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm font-bold" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+
+    // Các trang số (Hiển thị giới hạn trang xung quanh trang hiện tại để không bị quá dài)
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+            if (i === currentPage) {
+                buttons += `<button class="px-3 py-1 rounded bg-orange-500 text-white font-bold shadow-sm text-sm">${i}</button>`;
+            } else {
+                buttons += `<button onclick="changePage(${i})" class="px-3 py-1 rounded border border-gray-200 text-gray-700 hover:bg-orange-50 transition-colors text-sm">${i}</button>`;
+            }
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+            buttons += `<span class="px-2 text-gray-400">...</span>`;
+        }
+    }
+
+    // Nút Trang sau
+    buttons += `<button onclick="changePage(${currentPage + 1})" class="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm font-bold" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+
+    paginationContainer.innerHTML = buttons;
+}
+
+// HÀM CHUYỂN TRANG
+function changePage(page) {
+    currentPage = page;
+    renderCategoryAccordion();
+    // Tự động cuộn lên đầu bảng danh mục
+    document.getElementById('categoryAccordionBody').closest('.bg-white').scrollIntoView({ behavior: 'smooth' });
 }
 
 function toggleAccordion(id) {
