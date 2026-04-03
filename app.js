@@ -5,6 +5,7 @@ document.getElementById('currentDate').textContent = new Date().toLocaleDateStri
 let globalDetails = [];
 let charts = {};
 let rankTrackingData = []; 
+let canniData = []; // BIẾN CHỨA DỮ LIỆU CANNIBALIZATION
 
 function formatDisplayDate(dateStr) {
     const d = parseDate(dateStr);
@@ -73,6 +74,8 @@ async function loadData() {
 
         globalDetails = data.chiTiet || [];
         rankTrackingData = data.rankTracking || []; 
+        canniData = data.cannibalization || []; // NHẬN DATA CANNIBALIZATION TỪ API
+        
         const tq = data.tongQuan;
         
         document.getElementById('totalUrls').textContent = tq.tongUrl || '0';
@@ -84,11 +87,9 @@ async function loadData() {
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
+        renderCannibalizationTool(); // KÍCH HOẠT RADAR ĂN THỊT
         renderMoneyPagesTool(); 
-        
-        // TÍNH NĂNG MỚI: Kích hoạt trạm suy thoái nội dung
         renderContentDecayTool(); 
-        
         renderZombieTool(); 
         renderCategoryAccordion();
         initFilters();
@@ -100,7 +101,7 @@ async function loadData() {
                     <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i>
                     <h3 class="text-red-700 font-bold text-lg mb-1">Hệ thống phân tích gặp sự cố</h3>
                     <p class="text-red-600 text-sm mb-3"><b>Nguyên nhân:</b> ${e.message}</p>
-                    <p class="text-gray-500 text-xs italic">Hãy kiểm tra lại bước "Triển khai (Deploy)" trong Google Apps Script, hoặc bấm F12 chọn tab Console để xem chi tiết.</p>
+                    <p class="text-gray-500 text-xs italic">Hãy kiểm tra lại bước "Triển khai (Deploy)" trong Google Apps Script.</p>
                 </td>
             </tr>
         `;
@@ -198,6 +199,112 @@ function renderRankTracking() {
     `;
 }
 
+/**
+ * THUẬT TOÁN MỚI: PHÁT HIỆN ĂN THỊT TỪ KHÓA (CANNIBALIZATION)
+ */
+function renderCannibalizationTool() {
+    let container = document.getElementById('canniToolContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'canniToolContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-gray-800 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    if (!canniData || canniData.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-gray-50 text-gray-700 font-bold"><i class="fas fa-info-circle mr-2"></i>Chưa có dữ liệu Cannibalization.</div>`;
+        return;
+    }
+
+    // Nhóm theo Keyword
+    let groups = {};
+    canniData.forEach(row => {
+        let kw = String(row.Keyword).trim().toLowerCase();
+        if (!groups[kw]) groups[kw] = [];
+        groups[kw].push(row);
+    });
+
+    // Lọc ra các nhóm bị "ăn thịt" (>= 2 URLs tranh nhau)
+    let cannibalized = [];
+    for (let kw in groups) {
+        let urls = groups[kw];
+        // Bỏ qua các URL quá yếu để tránh báo động giả
+        let activeUrls = urls.filter(u => (parseInt(u.Impressions) > 10 || parseInt(u.Clicks) > 0));
+        
+        if (activeUrls.length > 1) {
+            activeUrls.sort((a, b) => {
+                let diff = (parseInt(b.Clicks) || 0) - (parseInt(a.Clicks) || 0);
+                if (diff !== 0) return diff;
+                return (parseInt(b.Impressions) || 0) - (parseInt(a.Impressions) || 0);
+            });
+            
+            let totalClicks = activeUrls.reduce((sum, u) => sum + (parseInt(u.Clicks) || 0), 0);
+            let totalImp = activeUrls.reduce((sum, u) => sum + (parseInt(u.Impressions) || 0), 0);
+            
+            cannibalized.push({ keyword: kw, urls: activeUrls, totalClicks: totalClicks, totalImp: totalImp });
+        }
+    }
+
+    // Ưu tiên hiển thị lỗi mất Clicks cao nhất lên đầu
+    cannibalized.sort((a, b) => b.totalClicks - a.totalClicks || b.totalImp - a.totalImp);
+    cannibalized = cannibalized.slice(0, 20);
+
+    if (cannibalized.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Tuyệt vời! Không phát hiện URL nào xung đột từ khóa.</div>`;
+        return;
+    }
+
+    let rows = cannibalized.map((item) => {
+        let urlRows = item.urls.map((u, index) => {
+            let badge = index === 0 ? `<span class="bg-green-100 text-green-700 px-1 py-0.5 rounded text-[8px] uppercase font-bold ml-2">Đang Top</span>` : `<span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[8px] uppercase font-bold ml-2">Đang phá</span>`;
+            return `
+                <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-50 border-dashed last:border-0 last:mb-0 last:pb-0">
+                    <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] hover:underline truncate w-2/3" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')} ${badge}</a>
+                    <div class="text-[10px] text-gray-500 w-1/3 text-right">
+                        <span class="font-bold text-blue-600">${u.Clicks} Clicks</span> | ${u.Impressions} Imp (Top ${parseFloat(u.Position).toFixed(1)})
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <tr class="border-b hover:bg-gray-50 transition-colors">
+                <td class="p-3 text-xs text-gray-800 font-black whitespace-nowrap"><i class="fas fa-search text-gray-400 mr-2"></i>${item.keyword}</td>
+                <td class="p-3 text-xs text-center font-bold text-blue-600 bg-blue-50/30">${item.totalClicks}</td>
+                <td class="p-3 text-xs text-center text-gray-500 bg-gray-50/30">${item.totalImp}</td>
+                <td class="p-3">${urlRows}</td>
+                <td class="p-3 text-[10px]">
+                    <button class="bg-gray-800 hover:bg-black text-white px-2 py-1 rounded shadow-sm block w-full text-center mb-1">Gộp bài</button>
+                    <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-2 py-1 rounded shadow-sm block w-full text-center">Cắm Canonical</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-gray-800 to-gray-700 flex justify-between items-center cursor-pointer" onclick="document.getElementById('canniTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-white"><i class="fas fa-skull-crossbones text-red-400 mr-2"></i>Radar Ăn Thịt Từ Khóa (Cannibalization) <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${cannibalized.length} Lỗi Khẩn Cấp</span></h2>
+            <button class="bg-gray-600 hover:bg-gray-500 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="canniTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
+            <div class="text-xs text-gray-600 mb-3 italic">* Cảnh báo: Các URL bên dưới đang tự cạnh tranh nhau trên kết quả tìm kiếm cho cùng 1 từ khóa khiến rớt hạng. Bạn cần chọn ra 1 URL chính (Đang Top), và xử lý các URL còn lại (Gộp bài hoặc Cắm Canonical trỏ về bài chính).</div>
+            <table class="w-full text-left bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-gray-200 text-[10px] text-gray-700 uppercase font-black">
+                    <tr>
+                        <th class="p-3 w-40">Từ khóa bị xung đột</th>
+                        <th class="p-3 text-center w-20">Tổng Clicks</th>
+                        <th class="p-3 text-center w-20">Tổng Imp</th>
+                        <th class="p-3">Các URL đang đánh nhau (Clicks/Imp/Pos)</th>
+                        <th class="p-3 w-28 text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
 function renderMoneyPagesTool() {
     let container = document.getElementById('moneyPagesContainer');
     if (!container) {
@@ -273,13 +380,9 @@ function renderMoneyPagesTool() {
     `;
 }
 
-/**
- * TÍNH NĂNG MỚI: TRẠM CẢNH BÁO SUY THOÁI NỘI DUNG (CONTENT DECAY)
- */
 function renderContentDecayTool() {
     let container = document.getElementById('contentDecayContainer');
     if (!container) {
-        // Đặt nó nằm dưới Money Pages
         const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
         container = document.createElement('div');
         container.id = 'contentDecayContainer';
@@ -287,18 +390,16 @@ function renderContentDecayTool() {
         wrapper.parentNode.insertBefore(container, wrapper);
     }
 
-    // THUẬT TOÁN: Lọc bài có Traffic Tháng trước >= 20 VÀ Tụt rớt > 30%
     let decayingPages = globalDetails.filter(u => {
         let last = parseInt(u.TrafficLast) || 0;
         let current = parseInt(u.TrafficCurrent) || 0;
-        if (last < 20) return false; // Lọc nhiễu
-        if (current >= last) return false; // Không giảm thì bỏ qua
+        if (last < 20) return false; 
+        if (current >= last) return false; 
         
         let dropRatio = (last - current) / last;
-        return dropRatio >= 0.3; // Rớt 30% trở lên
+        return dropRatio >= 0.3; 
     });
 
-    // SẮP XẾP: Bốc những bài rớt % thê thảm nhất lên trước
     decayingPages.sort((a, b) => {
         let dropA = ((parseInt(a.TrafficLast) || 0) - (parseInt(a.TrafficCurrent) || 0)) / (parseInt(a.TrafficLast) || 1);
         let dropB = ((parseInt(b.TrafficLast) || 0) - (parseInt(b.TrafficCurrent) || 0)) / (parseInt(b.TrafficLast) || 1);
@@ -485,7 +586,6 @@ function renderCategoryAccordion() {
                                     const titleErr = (u.TitleLen > 60 || u.TitleLen < 30) ? 'text-red-500' : 'text-gray-700';
                                     const isIndexable = String(u.Indexability).includes('Non') ? 'text-red-600' : 'text-green-600';
                                     
-                                    // TỰ ĐỘNG CHẤM ĐIỂM SEO ONPAGE
                                     let seoScore = 100;
                                     if (u.TitleLen < 30 || u.TitleLen > 60) seoScore -= 20;
                                     if (u.H1Tech === 'N/A' || u.H1Tech === '') seoScore -= 20;
@@ -495,7 +595,6 @@ function renderCategoryAccordion() {
                                     seoScore = Math.max(0, seoScore); 
                                     let scoreColor = seoScore >= 90 ? 'bg-green-500' : (seoScore >= 70 ? 'bg-orange-500' : 'bg-red-500');
 
-                                    // CẬP NHẬT BIẾN SỐ GA4 (THỜI GIAN & CHUYỂN ĐỔI)
                                     let convCount = parseFloat(u.Conversions) || 0;
                                     let timeStr = formatTimeOnPage(u.TimeOnPage);
                                     let timeColor = parseFloat(u.TimeOnPage) > 90 ? 'text-green-600' : (parseFloat(u.TimeOnPage) < 30 ? 'text-red-500' : 'text-gray-700');
