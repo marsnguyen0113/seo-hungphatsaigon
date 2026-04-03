@@ -30,6 +30,15 @@ function getNormalizedStatus(viStatus) {
     return 'outdated';
 }
 
+// HÀM MỚI: CHUYỂN ĐỔI GIÂY GA4 SANG PHÚT/GIÂY
+function formatTimeOnPage(seconds) {
+    let sec = Math.round(parseFloat(seconds) || 0);
+    if (sec === 0) return "0s";
+    let m = Math.floor(sec / 60);
+    let s = sec % 60;
+    return m > 0 ? `${m}p ${s}s` : `${s}s`;
+}
+
 function initFilters() {
     const mainSelect = document.getElementById('mainCatFilter');
     const subSelect = document.getElementById('subCatFilter');
@@ -67,7 +76,8 @@ async function loadData() {
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
-        renderZombieTool(); // KÍCH HOẠT RADAR ZOMBIE PAGES
+        renderMoneyPagesTool(); // KÍCH HOẠT TRẠM SĂN MONEY PAGES
+        renderZombieTool(); 
         renderCategoryAccordion();
         initFilters();
     } catch (e) { console.error(e); }
@@ -165,8 +175,86 @@ function renderRankTracking() {
 }
 
 /**
- * TÍNH NĂNG MỚI: RADAR QUÉT ZOMBIE PAGES
+ * TÍNH NĂNG MỚI: TRẠM SĂN MONEY PAGES (TỪ GA4)
  */
+function renderMoneyPagesTool() {
+    let container = document.getElementById('moneyPagesContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'moneyPagesContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-yellow-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    // Thuật toán: Lọc bài có Chuyển đổi > 0 HOẶC (Thời gian đọc >= 120s VÀ Traffic > 10)
+    let moneyPages = globalDetails.filter(u => {
+        let conv = parseFloat(u.Conversions) || 0;
+        let time = parseFloat(u.TimeOnPage) || 0;
+        let traffic = parseInt(u.TrafficCurrent) || 0;
+        return (conv > 0 || (time >= 120 && traffic > 10));
+    });
+
+    // Sắp xếp: Ưu tiên Chuyển đổi cao, sau đó là Traffic cao
+    moneyPages.sort((a, b) => {
+        let convDiff = (parseFloat(b.Conversions) || 0) - (parseFloat(a.Conversions) || 0);
+        if (convDiff !== 0) return convDiff;
+        return (parseInt(b.TrafficCurrent) || 0) - (parseInt(a.TrafficCurrent) || 0);
+    });
+
+    // Cắt Top 15 trang tốt nhất
+    moneyPages = moneyPages.slice(0, 15);
+
+    if (moneyPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-yellow-50 text-yellow-700 font-bold"><i class="fas fa-exclamation-circle mr-2"></i>Chưa có dữ liệu Chuyển đổi từ GA4.</div>`;
+        return;
+    }
+
+    let rows = moneyPages.map((u, i) => {
+        let conv = parseFloat(u.Conversions) || 0;
+        let timeFormatted = formatTimeOnPage(u.TimeOnPage);
+        let traffic = parseInt(u.TrafficCurrent).toLocaleString('vi-VN');
+        
+        let convBadge = conv > 0 ? `<span class="bg-green-100 text-green-800 px-2 py-1 rounded font-black shadow-sm">+${conv} Đơn/LH</span>` : `<span class="text-gray-400">0</span>`;
+        let timeBadge = parseFloat(u.TimeOnPage) > 120 ? `text-green-600 font-bold` : `text-gray-600`;
+
+        return `
+            <tr class="border-b hover:bg-yellow-50 transition-colors">
+                <td class="p-3 text-xs text-yellow-600 font-black">${i+1}</td>
+                <td class="p-3 text-xs">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block break-all">${u.URL}</a>
+                    <div class="text-[10px] text-gray-500 mt-1 line-clamp-1">${u.TieuDe}</div>
+                </td>
+                <td class="p-3 text-center font-bold text-gray-700">${traffic}</td>
+                <td class="p-3 text-center ${timeBadge} text-xs">${timeFormatted}</td>
+                <td class="p-3 text-center text-[11px]">${convBadge}</td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-yellow-200 bg-gradient-to-r from-yellow-100 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('moneyTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-yellow-800"><i class="fas fa-coins text-yellow-600 mr-2"></i>Trạm Săn Money Pages (GA4) <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">Top ${moneyPages.length}</span></h2>
+            <button class="bg-yellow-500 hover:bg-yellow-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="moneyTableArea" class="hidden overflow-x-auto p-4 bg-yellow-50/30">
+            <div class="text-xs text-yellow-800 mb-3 italic">* Các bài viết có chuyển đổi hoặc thời gian đọc > 120s. <b>Tuyệt đối không xóa/đổi URL các trang này.</b></div>
+            <table class="w-full text-left bg-white border border-yellow-200 rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-yellow-100/50 text-[10px] text-yellow-800 uppercase font-black">
+                    <tr>
+                        <th class="p-3 w-10">STT</th>
+                        <th class="p-3">Bài viết "Bò sữa"</th>
+                        <th class="p-3 text-center w-24">Traffic</th>
+                        <th class="p-3 text-center w-32">Tg đọc (Avg)</th>
+                        <th class="p-3 text-center w-32">Chuyển đổi</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
 function renderZombieTool() {
     let container = document.getElementById('zombieToolContainer');
     if (!container) {
@@ -177,7 +265,6 @@ function renderZombieTool() {
         wrapper.parentNode.insertBefore(container, wrapper);
     }
 
-    // THUẬT TOÁN BẮT ZOMBIE
     const zombies = globalDetails.filter(u => {
         const noTraffic = (parseInt(u.TrafficCurrent) || 0) === 0;
         const noGscClicks = (parseInt(u.GSCClicks) || 0) === 0;
@@ -186,7 +273,6 @@ function renderZombieTool() {
         const orphan = (parseInt(u.Inlinks) || 0) === 0;
         const nonIndexable = String(u.Indexability).includes('Non');
 
-        // Bị dính: Không Traffic + (Nội dung mỏng HOẶC Mồ côi HOẶC Chặn Index)
         return (noTraffic && noGscClicks) && (thinContent || orphan || nonIndexable);
     });
 
@@ -306,6 +392,11 @@ function renderCategoryAccordion() {
                                     if (String(u.Indexability).includes('Non')) seoScore -= 50;
                                     seoScore = Math.max(0, seoScore); 
                                     let scoreColor = seoScore >= 90 ? 'bg-green-500' : (seoScore >= 70 ? 'bg-orange-500' : 'bg-red-500');
+
+                                    // CẬP NHẬT BIẾN SỐ GA4 (THỜI GIAN & CHUYỂN ĐỔI)
+                                    let convCount = parseFloat(u.Conversions) || 0;
+                                    let timeStr = formatTimeOnPage(u.TimeOnPage);
+                                    let timeColor = parseFloat(u.TimeOnPage) > 90 ? 'text-green-600' : (parseFloat(u.TimeOnPage) < 30 ? 'text-red-500' : 'text-gray-700');
                                     
                                     return `
                                         <tr class="border-b hover:bg-blue-50/30 transition-colors">
@@ -313,15 +404,22 @@ function renderCategoryAccordion() {
                                             <td class="p-3">
                                                 <div class="flex items-center gap-2 mb-2">
                                                     <span class="${scoreColor} text-white font-black text-[9px] px-2 py-0.5 rounded" title="Điểm SEO Onpage">Điểm SEO: ${seoScore}</span>
+                                                    ${convCount > 0 ? `<span class="bg-yellow-100 text-yellow-800 font-black text-[9px] px-2 py-0.5 rounded border border-yellow-300"><i class="fas fa-coins mr-1"></i>Ra đơn</span>` : ''}
                                                     <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] font-bold hover:underline">${u.URL}</a>
                                                 </div>
                                                 
                                                 <div class="grid grid-cols-3 gap-3 p-2 bg-gray-50 rounded text-[9px] border border-gray-100 shadow-sm">
-                                                    <div class="col-span-2 grid grid-cols-2 gap-2 border-r border-gray-200 pr-2">
-                                                        <div><span class="text-gray-400 uppercase font-bold">Title:</span> <span class="${titleErr}">${u.TitleTech} (${u.TitleLen})</span></div>
-                                                        <div><span class="text-gray-400 uppercase font-bold">H1:</span> <span>${u.H1Tech}</span></div>
-                                                        <div><span class="text-gray-400 uppercase font-bold">Content:</span> <span class="${u.WordCount < 500 ? 'text-orange-500 font-bold' : ''}">${parseInt(u.WordCount||0).toLocaleString('vi-VN')} chữ</span></div>
-                                                        <div><span class="text-gray-400 uppercase font-bold">Health:</span> <span>${u.Inlinks} Links | <b class="${isIndexable}">${u.Indexability}</b></span></div>
+                                                    <div class="col-span-2 border-r border-gray-200 pr-2">
+                                                        <div class="grid grid-cols-2 gap-2 mb-2 pb-2 border-b border-gray-200 border-dashed">
+                                                            <div><span class="text-gray-400 uppercase font-bold">Title:</span> <span class="${titleErr}">${u.TitleTech} (${u.TitleLen})</span></div>
+                                                            <div><span class="text-gray-400 uppercase font-bold">H1:</span> <span>${u.H1Tech}</span></div>
+                                                            <div><span class="text-gray-400 uppercase font-bold">Content:</span> <span class="${u.WordCount < 500 ? 'text-orange-500 font-bold' : ''}">${parseInt(u.WordCount||0).toLocaleString('vi-VN')} chữ</span></div>
+                                                            <div><span class="text-gray-400 uppercase font-bold">Health:</span> <span>${u.Inlinks} Links | <b class="${isIndexable}">${u.Indexability}</b></span></div>
+                                                        </div>
+                                                        <div class="grid grid-cols-2 gap-2">
+                                                            <div><span class="text-gray-400 uppercase font-bold"><i class="fas fa-clock mr-1"></i>Tg xem:</span> <b class="${timeColor}">${timeStr}</b></div>
+                                                            <div><span class="text-gray-400 uppercase font-bold"><i class="fas fa-bolt mr-1"></i>Chuyển đổi:</span> <b class="${convCount > 0 ? 'text-green-600 text-[10px]' : 'text-gray-500'}">${convCount}</b></div>
+                                                        </div>
                                                     </div>
                                                     <div class="pl-1">
                                                         <div class="text-purple-600 uppercase font-black mb-1"><i class="fab fa-google mr-1"></i>Google Search</div>
@@ -331,6 +429,7 @@ function renderCategoryAccordion() {
                                                         <div class="flex justify-between"><span class="text-gray-500">CTR:</span> <b>${u.GSCCTR || '0%'}</b></div>
                                                     </div>
                                                 </div>
+                                                
                                             </td>
                                             <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-100 text-blue-700">${u.TrangThai}</span></td>
                                             <td class="p-3 text-center font-bold text-xs">${parseInt(u.TrafficCurrent).toLocaleString('vi-VN')}</td>
