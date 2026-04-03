@@ -7,9 +7,10 @@ let charts = {};
 let rankTrackingData = []; 
 let canniData = []; 
 
+// BIẾN QUẢN LÝ PHÂN TRANG
 let currentFilteredGroups = [];
 let currentPage = 1;
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 20; // Hiển thị 20 danh mục mỗi trang để load mượt nhất
 
 function formatDisplayDate(dateStr) {
     const d = parseDate(dateStr);
@@ -52,6 +53,7 @@ function initFilters() {
     mainSelect.innerHTML = '<option value="">Tất cả danh mục chính</option>' + mainCats.map(c => `<option value="${c}">${c}</option>`).join('');
     subSelect.innerHTML = '<option value="">Tất cả danh mục con</option>' + subCats.map(c => `<option value="${c}">${c}</option>`).join('');
     
+    // Gắn sự kiện khi filter thay đổi -> reset về trang 1
     ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
             currentPage = 1;
@@ -68,16 +70,24 @@ function initFilters() {
 
 async function loadData() {
     const tbody = document.getElementById('categoryAccordionBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang kết nối API để tải dữ liệu...</td></tr>';
     try {
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error(`API lỗi mã: ${response.status}`);
+        
+        if (!response.ok) {
+            throw new Error(`API lỗi mã: ${response.status} - ${response.statusText}`);
+        }
 
         const data = await response.json();
-        if (!data || !data.tongQuan) throw new Error("Dữ liệu hỏng!");
+        
+        if (!data || !data.tongQuan) {
+            throw new Error("Dữ liệu JSON trả về bị thiếu hoặc hỏng cấu trúc!");
+        }
 
         globalDetails = data.chiTiet || [];
         rankTrackingData = data.rankTracking || []; 
         canniData = data.cannibalization || []; 
+        
         const tq = data.tongQuan;
         
         document.getElementById('totalUrls').textContent = tq.tongUrl || '0';
@@ -95,14 +105,17 @@ async function loadData() {
         renderZombieTool(); 
         
         initFilters();
+        // Gọi hàm xử lý lọc thay vì render trực tiếp
         processFilters(); 
     } catch (e) { 
         console.error("LỖI HỆ THỐNG:", e); 
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="p-10 text-center bg-red-50">
-                    <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3 block"></i>
-                    <span class="text-red-700 font-bold">Lỗi kết nối API: ${e.message}</span>
+                <td colspan="6" class="p-10 text-center bg-red-50 border border-red-200">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i>
+                    <h3 class="text-red-700 font-bold text-lg mb-1">Hệ thống phân tích gặp sự cố</h3>
+                    <p class="text-red-600 text-sm mb-3"><b>Nguyên nhân:</b> ${e.message}</p>
+                    <p class="text-gray-500 text-xs italic">Hãy kiểm tra lại bước "Triển khai (Deploy)" trong Google Apps Script.</p>
                 </td>
             </tr>
         `;
@@ -162,6 +175,7 @@ function renderRankTracking() {
 
         let isLowHanging = (pos > 10 && pos <= 15) ? 'bg-yellow-50 border-l-4 border-yellow-400' : 'hover:bg-gray-50';
         let alertTag = (pos > 10 && pos <= 15) ? `<span class="ml-2 bg-yellow-200 text-yellow-800 text-[8px] px-1 rounded uppercase font-black">Cơ hội đẩy Top</span>` : '';
+
         let posBadge = pos <= 3 ? 'bg-green-100 text-green-700' : (pos <= 10 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600');
         
         return `
@@ -298,10 +312,11 @@ function renderCannibalizationTool() {
 
     container.innerHTML = `
         <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-gray-800 to-gray-700 flex justify-between items-center cursor-pointer" onclick="document.getElementById('canniTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-white"><i class="fas fa-skull-crossbones text-red-400 mr-2"></i>Radar Ăn Thịt Từ Khóa <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${cannibalized.length} Lỗi Khẩn Cấp</span></h2>
+            <h2 class="text-lg font-black text-white"><i class="fas fa-skull-crossbones text-red-400 mr-2"></i>Radar Ăn Thịt Từ Khóa (Cannibalization) <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${cannibalized.length} Lỗi Khẩn Cấp</span></h2>
             <button class="bg-gray-600 hover:bg-gray-500 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="canniTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
+            <div class="text-xs text-gray-600 mb-3 italic">* Cảnh báo: Các URL bên dưới đang tự cạnh tranh nhau trên kết quả tìm kiếm cho cùng 1 từ khóa. Cần chọn ra 1 URL chính và xử lý các URL phụ.</div>
             <table class="w-full text-left bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-gray-200 text-[10px] text-gray-700 uppercase font-black">
                     <tr>
@@ -353,7 +368,7 @@ function renderMoneyPagesTool() {
         let timeFormatted = formatTimeOnPage(u.TimeOnPage);
         let traffic = parseInt(u.TrafficCurrent).toLocaleString('vi-VN');
         
-        let convBadge = conv > 0 ? `<span class="bg-green-100 text-green-800 px-2 py-1 rounded font-black shadow-sm">+${conv} Đơn</span>` : `<span class="text-gray-400">0</span>`;
+        let convBadge = conv > 0 ? `<span class="bg-green-100 text-green-800 px-2 py-1 rounded font-black shadow-sm">+${conv} Đơn/LH</span>` : `<span class="text-gray-400">0</span>`;
         let timeBadge = parseFloat(u.TimeOnPage) > 120 ? `text-green-600 font-bold` : `text-gray-600`;
 
         return `
@@ -372,7 +387,7 @@ function renderMoneyPagesTool() {
 
     container.innerHTML = `
         <div class="px-6 py-4 border-b border-yellow-200 bg-gradient-to-r from-yellow-100 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('moneyTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-yellow-800"><i class="fas fa-coins text-yellow-600 mr-2"></i>Trạm Săn Money Pages <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">Top ${moneyPages.length}</span></h2>
+            <h2 class="text-lg font-black text-yellow-800"><i class="fas fa-coins text-yellow-600 mr-2"></i>Trạm Săn Money Pages (GA4) <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">Top ${moneyPages.length}</span></h2>
             <button class="bg-yellow-500 hover:bg-yellow-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="moneyTableArea" class="hidden overflow-x-auto p-4 bg-yellow-50/30">
@@ -419,7 +434,7 @@ function renderContentDecayTool() {
     });
 
     if (decayingPages.length === 0) {
-        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-shield-alt mr-2"></i>Phong độ ổn định!</div>`;
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-shield-alt mr-2"></i>Phong độ ổn định! Không có bài viết bị tụt hạng nặng.</div>`;
         return;
     }
 
@@ -449,7 +464,7 @@ function renderContentDecayTool() {
 
     container.innerHTML = `
         <div class="px-6 py-4 border-b border-red-200 bg-gradient-to-r from-red-100 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('decayTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-red-800"><i class="fas fa-chart-line fa-flip-vertical text-red-600 mr-2"></i>Trạm Cảnh Báo Suy Thoái <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${decayingPages.length} Bài Rớt Hạng</span></h2>
+            <h2 class="text-lg font-black text-red-800"><i class="fas fa-chart-line fa-flip-vertical text-red-600 mr-2"></i>Trạm Cảnh Báo Suy Thoái Nội Dung <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${decayingPages.length} Bài Rớt Hạng</span></h2>
             <button class="bg-red-500 hover:bg-red-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="decayTableArea" class="hidden overflow-x-auto p-4 bg-red-50/30">
@@ -546,6 +561,7 @@ function renderZombieTool() {
     `;
 }
 
+// HÀM MỚI: XỬ LÝ LỌC & GỌI PHÂN TRANG
 function processFilters() {
     const mainVal = document.getElementById('mainCatFilter').value;
     const subVal = document.getElementById('subCatFilter').value;
@@ -567,6 +583,7 @@ function processFilters() {
         grouped[key].urls.push(item);
     });
 
+    // Cập nhật mảng hiện tại cho phân trang
     currentFilteredGroups = Object.keys(grouped).map(key => grouped[key]);
     
     currentFilteredGroups.sort((a, b) => {
@@ -575,9 +592,11 @@ function processFilters() {
         return totalB - totalA;
     });
 
+    // Gọi hàm render bảng dựa trên biến currentPage
     renderCategoryAccordion();
 }
 
+// RENDER BẢNG THEO SỐ TRANG
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
     tbody.innerHTML = '';
@@ -590,7 +609,7 @@ function renderCategoryAccordion() {
     const groupsToRender = currentFilteredGroups.slice(startIndex, endIndex);
 
     if (groupsToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy dữ liệu phù hợp với bộ lọc.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy dữ liệu.</td></tr>`;
         renderPaginationControls(totalPages);
         return;
     }
@@ -682,6 +701,7 @@ function renderCategoryAccordion() {
     renderPaginationControls(totalPages);
 }
 
+// HÀM VẼ NÚT BẤM CHUYỂN TRANG
 function renderPaginationControls(totalPages) {
     let paginationContainer = document.getElementById('paginationControls');
     if (!paginationContainer) return;
@@ -693,4 +713,39 @@ function renderPaginationControls(totalPages) {
 
     let buttons = '';
     
-    buttons += `<button onclick="changePage(${currentPage - 1})" class="px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm font-bold" ${currentPage ===
+    // Nút Trang trước
+    buttons += `<button onclick="changePage(${currentPage - 1})" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-orange-50 disabled:opacity-50 text-sm font-bold transition-colors" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+            if (i === currentPage) {
+                buttons += `<button class="px-4 py-2 rounded-lg bg-orange-500 text-white font-bold shadow-md text-sm">${i}</button>`;
+            } else {
+                buttons += `<button onclick="changePage(${i})" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors text-sm font-semibold">${i}</button>`;
+            }
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+            buttons += `<span class="px-2 text-gray-400">...</span>`;
+        }
+    }
+
+    // Nút Trang sau
+    buttons += `<button onclick="changePage(${currentPage + 1})" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-orange-50 disabled:opacity-50 text-sm font-bold transition-colors" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+
+    paginationContainer.innerHTML = buttons;
+}
+
+// HÀM LẮNG NGHE KHI BẤM CHUYỂN TRANG
+function changePage(page) {
+    currentPage = page;
+    renderCategoryAccordion();
+    document.getElementById('categoryAccordionBody').closest('.bg-white').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleAccordion(id) {
+    const r = document.getElementById(id);
+    const i = document.getElementById('icon-' + id);
+    if(r.classList.contains('hidden')) { r.classList.remove('hidden'); i.style.transform = 'rotate(90deg)'; }
+    else { r.classList.add('hidden'); i.style.transform = 'rotate(0deg)'; }
+}
+
+loadData();
