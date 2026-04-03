@@ -30,7 +30,6 @@ function getNormalizedStatus(viStatus) {
     return 'outdated';
 }
 
-// HÀM MỚI: CHUYỂN ĐỔI GIÂY GA4 SANG PHÚT/GIÂY
 function formatTimeOnPage(seconds) {
     let sec = Math.round(parseFloat(seconds) || 0);
     if (sec === 0) return "0s";
@@ -58,11 +57,22 @@ function initFilters() {
 
 async function loadData() {
     const tbody = document.getElementById('categoryAccordionBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang tải dữ liệu GSC và nội soi SEO...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang kết nối API để tải dữ liệu...</td></tr>';
     try {
         const response = await fetch(API_URL);
+        
+        // KIỂM TRA LỖI API TRẢ VỀ (Tránh bị kẹt loading)
+        if (!response.ok) {
+            throw new Error(`API lỗi mã: ${response.status} - ${response.statusText}`);
+        }
+
         const data = await response.json();
         
+        // KIỂM TRA DỮ LIỆU CÓ HỢP LỆ KHÔNG
+        if (!data || !data.tongQuan) {
+            throw new Error("Dữ liệu JSON trả về bị thiếu hoặc hỏng cấu trúc!");
+        }
+
         globalDetails = data.chiTiet || [];
         rankTrackingData = data.rankTracking || []; 
         const tq = data.tongQuan;
@@ -76,11 +86,24 @@ async function loadData() {
         renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
-        renderMoneyPagesTool(); // KÍCH HOẠT TRẠM SĂN MONEY PAGES
+        renderMoneyPagesTool(); 
         renderZombieTool(); 
         renderCategoryAccordion();
         initFilters();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("LỖI HỆ THỐNG:", e); 
+        // IN LỖI THẲNG RA MÀN HÌNH ĐỂ BẠN NHÌN THẤY
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="p-10 text-center bg-red-50 border border-red-200">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i>
+                    <h3 class="text-red-700 font-bold text-lg mb-1">Hệ thống phân tích gặp sự cố</h3>
+                    <p class="text-red-600 text-sm mb-3"><b>Nguyên nhân:</b> ${e.message}</p>
+                    <p class="text-gray-500 text-xs italic">Hãy kiểm tra lại bước "Triển khai (Deploy)" trong Google Apps Script, hoặc bấm F12 chọn tab Console để xem chi tiết.</p>
+                </td>
+            </tr>
+        `;
+    }
 }
 
 function renderAllCharts(total) {
@@ -174,9 +197,6 @@ function renderRankTracking() {
     `;
 }
 
-/**
- * TÍNH NĂNG MỚI: TRẠM SĂN MONEY PAGES (TỪ GA4)
- */
 function renderMoneyPagesTool() {
     let container = document.getElementById('moneyPagesContainer');
     if (!container) {
@@ -187,7 +207,6 @@ function renderMoneyPagesTool() {
         wrapper.parentNode.insertBefore(container, wrapper);
     }
 
-    // Thuật toán: Lọc bài có Chuyển đổi > 0 HOẶC (Thời gian đọc >= 120s VÀ Traffic > 10)
     let moneyPages = globalDetails.filter(u => {
         let conv = parseFloat(u.Conversions) || 0;
         let time = parseFloat(u.TimeOnPage) || 0;
@@ -195,14 +214,12 @@ function renderMoneyPagesTool() {
         return (conv > 0 || (time >= 120 && traffic > 10));
     });
 
-    // Sắp xếp: Ưu tiên Chuyển đổi cao, sau đó là Traffic cao
     moneyPages.sort((a, b) => {
         let convDiff = (parseFloat(b.Conversions) || 0) - (parseFloat(a.Conversions) || 0);
         if (convDiff !== 0) return convDiff;
         return (parseInt(b.TrafficCurrent) || 0) - (parseInt(a.TrafficCurrent) || 0);
     });
 
-    // Cắt Top 15 trang tốt nhất
     moneyPages = moneyPages.slice(0, 15);
 
     if (moneyPages.length === 0) {
