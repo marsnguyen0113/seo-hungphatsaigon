@@ -61,14 +61,12 @@ async function loadData() {
     try {
         const response = await fetch(API_URL);
         
-        // KIỂM TRA LỖI API TRẢ VỀ (Tránh bị kẹt loading)
         if (!response.ok) {
             throw new Error(`API lỗi mã: ${response.status} - ${response.statusText}`);
         }
 
         const data = await response.json();
         
-        // KIỂM TRA DỮ LIỆU CÓ HỢP LỆ KHÔNG
         if (!data || !data.tongQuan) {
             throw new Error("Dữ liệu JSON trả về bị thiếu hoặc hỏng cấu trúc!");
         }
@@ -87,12 +85,15 @@ async function loadData() {
         renderTop10Priority();
         renderRankTracking(); 
         renderMoneyPagesTool(); 
+        
+        // TÍNH NĂNG MỚI: Kích hoạt trạm suy thoái nội dung
+        renderContentDecayTool(); 
+        
         renderZombieTool(); 
         renderCategoryAccordion();
         initFilters();
     } catch (e) { 
         console.error("LỖI HỆ THỐNG:", e); 
-        // IN LỖI THẲNG RA MÀN HÌNH ĐỂ BẠN NHÌN THẤY
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" class="p-10 text-center bg-red-50 border border-red-200">
@@ -264,6 +265,90 @@ function renderMoneyPagesTool() {
                         <th class="p-3 text-center w-24">Traffic</th>
                         <th class="p-3 text-center w-32">Tg đọc (Avg)</th>
                         <th class="p-3 text-center w-32">Chuyển đổi</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+/**
+ * TÍNH NĂNG MỚI: TRẠM CẢNH BÁO SUY THOÁI NỘI DUNG (CONTENT DECAY)
+ */
+function renderContentDecayTool() {
+    let container = document.getElementById('contentDecayContainer');
+    if (!container) {
+        // Đặt nó nằm dưới Money Pages
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'contentDecayContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    // THUẬT TOÁN: Lọc bài có Traffic Tháng trước >= 20 VÀ Tụt rớt > 30%
+    let decayingPages = globalDetails.filter(u => {
+        let last = parseInt(u.TrafficLast) || 0;
+        let current = parseInt(u.TrafficCurrent) || 0;
+        if (last < 20) return false; // Lọc nhiễu
+        if (current >= last) return false; // Không giảm thì bỏ qua
+        
+        let dropRatio = (last - current) / last;
+        return dropRatio >= 0.3; // Rớt 30% trở lên
+    });
+
+    // SẮP XẾP: Bốc những bài rớt % thê thảm nhất lên trước
+    decayingPages.sort((a, b) => {
+        let dropA = ((parseInt(a.TrafficLast) || 0) - (parseInt(a.TrafficCurrent) || 0)) / (parseInt(a.TrafficLast) || 1);
+        let dropB = ((parseInt(b.TrafficLast) || 0) - (parseInt(b.TrafficCurrent) || 0)) / (parseInt(b.TrafficLast) || 1);
+        return dropB - dropA; 
+    });
+
+    if (decayingPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-shield-alt mr-2"></i>Phong độ ổn định! Không có bài viết nào bị sụt giảm Traffic nghiêm trọng (>30%).</div>`;
+        return;
+    }
+
+    let rows = decayingPages.slice(0, 15).map((u, i) => {
+        let last = parseInt(u.TrafficLast) || 0;
+        let current = parseInt(u.TrafficCurrent) || 0;
+        let dropRatio = ((last - current) / last * 100).toFixed(1);
+        let dropAbs = last - current;
+
+        return `
+            <tr class="border-b hover:bg-red-50 transition-colors">
+                <td class="p-3 text-xs text-red-600 font-black">${i+1}</td>
+                <td class="p-3 text-xs">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block break-all">${u.URL}</a>
+                    <div class="text-[10px] text-gray-500 mt-1 line-clamp-1">${u.TieuDe}</div>
+                </td>
+                <td class="p-3 text-center text-gray-400 font-bold line-through">${last}</td>
+                <td class="p-3 text-center text-red-600 font-black">${current}</td>
+                <td class="p-3 text-center">
+                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-black shadow-sm text-[10px]">
+                        <i class="fas fa-arrow-down mr-1"></i>${dropRatio}% (-${dropAbs})
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-red-200 bg-gradient-to-r from-red-100 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('decayTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-red-800"><i class="fas fa-chart-line fa-flip-vertical text-red-600 mr-2"></i>Trạm Cảnh Báo Suy Thoái Nội Dung <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${decayingPages.length} Bài Rớt Hạng</span></h2>
+            <button class="bg-red-500 hover:bg-red-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="decayTableArea" class="hidden overflow-x-auto p-4 bg-red-50/30">
+            <div class="text-xs text-red-800 mb-3 italic">* Các bài viết từng có lượng truy cập tốt (>20 views) nhưng tháng này bị <b>sụt giảm nặng nề hơn 30%</b>. Cần bổ sung thông tin, cập nhật title hoặc chèn Internal link gấp để kéo lại Top.</div>
+            <table class="w-full text-left bg-white border border-red-200 rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-red-100/50 text-[10px] text-red-800 uppercase font-black">
+                    <tr>
+                        <th class="p-3 w-10">STT</th>
+                        <th class="p-3">URL Đang Suy Thoái</th>
+                        <th class="p-3 text-center w-24">Traffic Tháng Trước</th>
+                        <th class="p-3 text-center w-24">Traffic Hiện Tại</th>
+                        <th class="p-3 text-center w-32">Mức Độ Tụt Hạng</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
