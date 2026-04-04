@@ -122,6 +122,7 @@ async function loadData() {
         renderUXScannerTool();
         renderLinkJuiceHubTool();
         renderRevenueAndEngagementTool();
+        renderRichSnippetAndDeviceTool();
 
         initFilters();
         processFilters(); 
@@ -1204,6 +1205,88 @@ function renderRevenueAndEngagementTool() {
                         </thead>
                         <tbody>${rowsBadEng || '<tr><td colspan="4" class="text-center p-4 text-green-600 font-medium">Tuyệt vời! Không có trang nào bị rớt tương tác.</td></tr>'}</tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+// ==========================================
+// TÍNH NĂNG MỚI 6: TRẠM KIỂM ĐỊNH SCHEMA & THIẾT BỊ (GSC PRO)
+// ==========================================
+function renderRichSnippetAndDeviceTool() {
+    let container = document.getElementById('gscProContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'gscProContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-purple-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    // 1. Quét lỗi Schema: Trang Sản phẩm/Danh mục có Click nhưng KHÔNG có Product/Review Snippet
+    let schemaDropPages = globalDetails.filter(u => {
+        let url = String(u.URL).toLowerCase();
+        let isProduct = url.includes('/shop/') || url.includes('/danh-muc/');
+        let appearance = String(u.SearchAppearance).toUpperCase();
+        let clicks = parseInt(u.GSCClicks) || 0;
+        
+        // Trả về true nếu là trang sản phẩm, có truy cập nhưng chỉ hiển thị dạng "Normal" (Mất Schema)
+        return isProduct && clicks > 0 && (!appearance.includes('PRODUCT') && !appearance.includes('REVIEW') && !appearance.includes('MERCHANT'));
+    }).sort((a,b) => (parseInt(b.GSCClicks)||0) - (parseInt(a.GSCClicks)||0)).slice(0, 10);
+
+    // 2. Phân tích Thiết bị: Top trang có Traffic cao mà Thiết bị chủ đạo là MOBILE
+    let mobilePages = globalDetails.filter(u => {
+        let device = String(u.TopDevice).toUpperCase();
+        let traffic = parseInt(u.TrafficCurrent) || 0;
+        return device.includes('MOBILE') && traffic > 100;
+    }).sort((a,b) => (parseInt(b.TrafficCurrent)||0) - (parseInt(a.TrafficCurrent)||0)).slice(0, 10);
+
+    if (schemaDropPages.length === 0 && mobilePages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-purple-50 text-purple-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Đang chờ GSC cập nhật thêm dữ liệu Hiển thị và Thiết bị.</div>`;
+        return;
+    }
+
+    let rowsSchema = schemaDropPages.map((u, i) => `
+        <tr class="border-b border-r border-gray-100 hover:bg-purple-50">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-purple-700 font-bold hover:underline block truncate w-40 lg:w-56" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-bold text-gray-600">${parseInt(u.GSCClicks).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-center text-xs font-black text-red-500">Mất Schema</td>
+        </tr>`).join('');
+
+    let rowsDevice = mobilePages.map((u, i) => `
+        <tr class="border-b hover:bg-indigo-50 border-l border-gray-100">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-indigo-700 font-bold hover:underline block truncate w-40 lg:w-56" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-bold text-gray-600">${parseInt(u.TrafficCurrent).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-center text-[10px] font-black text-indigo-600"><i class="fas fa-mobile-alt mr-1"></i> Mobile</td>
+        </tr>`).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-purple-200 bg-gradient-to-r from-purple-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('gscProTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-purple-800"><i class="fas fa-star text-purple-600 mr-2 group-hover:rotate-180 transition-transform"></i>Trạm Kiểm Định Schema & Tối Ưu Thiết Bị (GSC Pro)</h2>
+            <button class="bg-purple-500 hover:bg-purple-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="gscProTableArea" class="hidden p-4 bg-purple-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-purple-100 rounded shadow-sm leading-relaxed">
+                <i class="fas fa-magic text-purple-500 mr-1"></i> <b>Hướng dẫn hành động:</b><br>
+                👉 <b>Bảng Trái (Mất Schema):</b> Các trang Sản phẩm/Danh mục đang bán hàng nhưng không được Google hiển thị <b>Giá, Đánh giá Sao (Review)</b>. Hãy kiểm tra lại mã JSON-LD/Schema trên bài viết này ngay để x2 tỷ lệ Click.<br>
+                👉 <b>Bảng Phải (Thiết bị Mobile):</b> Đây là các trang có Traffic cao và khách 100% dùng Điện thoại. Hãy cầm Smartphone lên, truy cập vào các trang này xem <b>nút Gọi/Zalo, banner quảng cáo, font chữ</b> có bị che khuất hay khó bấm không!
+            </div>
+            <div class="flex flex-col xl:flex-row gap-4">
+                <div class="w-full xl:w-1/2 bg-white border border-purple-200 rounded-lg shadow-sm">
+                    <div class="bg-purple-100 text-purple-800 font-black text-xs uppercase p-3 text-center border-b border-purple-200">
+                        <i class="fas fa-exclamation-triangle mr-1 text-red-500"></i> Cảnh Báo Rớt Schema Sản Phẩm
+                    </div>
+                    <table class="w-full text-left"><thead class="text-[10px] text-gray-500 bg-gray-50"><tr><th class="p-2">URL Bán Hàng</th><th class="p-2 text-center w-20">Clicks</th><th class="p-2 text-center w-24">Tình trạng</th></tr></thead><tbody>${rowsSchema || '<tr><td colspan="3" class="text-center p-4 text-green-600 font-bold">100% Sản phẩm hiển thị Schema tốt!</td></tr>'}</tbody></table>
+                </div>
+                <div class="w-full xl:w-1/2 bg-white border border-indigo-200 rounded-lg shadow-sm">
+                    <div class="bg-indigo-100 text-indigo-800 font-black text-xs uppercase p-3 text-center border-b border-indigo-200">
+                        <i class="fas fa-mobile-alt mr-1 text-indigo-600"></i> TOP URL CẦN TỐI ƯU UX MOBILE
+                    </div>
+                    <table class="w-full text-left"><thead class="text-[10px] text-gray-500 bg-gray-50"><tr><th class="p-2">URL Nhiều Traffic Mobile</th><th class="p-2 text-center w-20">Traffic</th><th class="p-2 text-center w-24">Thiết bị chủ đạo</th></tr></thead><tbody>${rowsDevice || '<tr><td colspan="3" class="text-center p-4 text-gray-500 font-medium">Chưa có dữ liệu Mobile nổi bật.</td></tr>'}</tbody></table>
                 </div>
             </div>
         </div>
