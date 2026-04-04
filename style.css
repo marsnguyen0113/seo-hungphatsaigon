@@ -1,13 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* --- 1. TỐI ƯU HIỂN THỊ CƠ BẢN --- */
 body { 
     font-family: 'Inter', sans-serif; 
+    color: #334155; /* Slate 700 - Chuyển sang xám than để dịu mắt hơn đen tuyền */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .brand-gradient { 
     background: linear-gradient(135deg, #1E3A5F 0%, #0F172A 100%); 
 }
 
+/* --- 2. CHUẨN HÓA FONT CHỮ TOÀN BỘ DASHBOARD --- */
+/* Ghi đè các class text-xs, text-[10px] lộn xộn trong Javascript */
+
+/* Tiêu đề của các Trạm Radar */
+h2 {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px;
+}
+
+/* Tiêu đề cột của các bảng (Thead) */
+table th {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #475569 !important; /* Xám dịu */
+    padding: 10px 12px !important;
+}
+
+/* Nội dung các ô dữ liệu (Tbody) */
+table td {
+    font-size: 13px !important; /* Chuẩn 13px là hoàn hảo nhất cho Dashboard */
+    line-height: 1.5 !important;
+    padding: 10px 12px !important;
+}
+
+/* Các URL/Link bài viết */
+table td a {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+/* Các thẻ Tag/Badge (Cảnh báo, Điểm SEO, Top GSC...) */
+table td span.px-2, 
+table td span.px-1 {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    display: inline-block;
+}
+
+/* Các đoạn text ghi chú (Insight/Gợi ý hành động) */
+.italic, .leading-relaxed {
+    font-size: 13px !important;
+    color: #475569 !important;
+}
+
+/* Các nút bấm (Buttons) */
+button {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 6px 12px !important;
+    letter-spacing: 0.2px;
+}
+
+/* --- 3. UTILITIES & ANIMATIONS --- */
 .expandable-content { 
     max-height: 0; 
     overflow: hidden; 
@@ -25,7 +89,26 @@ body {
 .rotate-icon.rotated { 
     transform: rotate(90deg); 
 }
-/* Màu xanh cho trạng thái tốt */
+
+/* --- 4. TỐI ƯU THANH CUỘN (SCROLLBAR) --- */
+/* Làm mỏng thanh cuộn ngang/dọc trong các bảng dữ liệu để gọn gàng hơn */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
+}
+
+/* --- 5. CLASS CŨ CỦA BẠN (GIỮ NGUYÊN) --- */
 .status-ok {
     color: #155724;
     background-color: #d4edda;
@@ -35,7 +118,6 @@ body {
     font-weight: bold;
 }
 
-/* Màu đỏ cho trạng thái lỗi */
 .status-error {
     color: #721c24;
     background-color: #f8d7da;
