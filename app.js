@@ -1101,7 +1101,114 @@ function renderCategoryAccordion() {
 
     renderPaginationControls(totalPages);
 }
+// ==========================================
+// TÍNH NĂNG MỚI 5: TRẠM TIỀN TỆ & LỖ HỔNG TƯƠNG TÁC (GA4 REVENUE & ENGAGEMENT)
+// ==========================================
+function renderRevenueAndEngagementTool() {
+    let container = document.getElementById('revenueContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'revenueContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-emerald-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
 
+    // 1. Phân tích Bảng Vàng Doanh Thu: Lọc trang có Revenue > 0 hoặc Conversions cao
+    let revenuePages = globalDetails.filter(u => {
+        let rev = parseFloat(u.Revenue) || 0;
+        let conv = parseInt(u.Conversions) || 0;
+        return rev > 0 || conv > 0;
+    }).sort((a,b) => {
+        let revDiff = (parseFloat(b.Revenue) || 0) - (parseFloat(a.Revenue) || 0);
+        if (revDiff !== 0) return revDiff;
+        return (parseInt(b.Conversions) || 0) - (parseInt(a.Conversions) || 0);
+    }).slice(0, 10);
+
+    // 2. Phân tích Lỗ Hổng Tương Tác: Traffic > 50 nhưng Engagement Rate < 40%
+    let badEngagementPages = globalDetails.filter(u => {
+        let traffic = parseInt(u.TrafficCurrent) || 0;
+        let engRate = parseFloat(u.EngagementRate) || 0;
+        // Chỉ quét khi có đủ data (Engagement Rate trả về > 0)
+        return traffic > 50 && engRate > 0 && engRate < 0.40; 
+    }).sort((a,b) => (parseInt(b.TrafficCurrent)||0) - (parseInt(a.TrafficCurrent)||0)).slice(0, 10);
+
+    if (revenuePages.length === 0 && badEngagementPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-emerald-50 text-emerald-700 font-bold"><i class="fas fa-coins mr-2"></i>Đang chờ GA4 cập nhật thêm dữ liệu Doanh thu và Tương tác.</div>`;
+        return;
+    }
+
+    // Render Rows cho Bảng Doanh Thu (Màu Xanh Ngọc - Emerald)
+    let rowsRev = revenuePages.map((u, i) => {
+        let revFormatted = (parseFloat(u.Revenue) || 0).toLocaleString('vi-VN') + ' đ';
+        let conv = parseInt(u.Conversions) || 0;
+        let traffic = parseInt(u.TrafficCurrent).toLocaleString('vi-VN');
+        
+        return `
+        <tr class="border-b border-r border-gray-100 hover:bg-emerald-50">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-emerald-700 font-bold hover:underline block truncate w-40 lg:w-56" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-bold text-gray-600">${traffic}</td>
+            <td class="p-2 text-center text-xs font-black text-emerald-600">${conv}</td>
+            <td class="p-2 text-right text-xs font-black text-green-700">${parseFloat(u.Revenue) > 0 ? revFormatted : '---'}</td>
+        </tr>`;
+    }).join('');
+
+    // Render Rows cho Bảng Cảnh Báo Tương Tác (Màu Hổ Phách - Amber)
+    let rowsBadEng = badEngagementPages.map((u, i) => {
+        let traffic = parseInt(u.TrafficCurrent).toLocaleString('vi-VN');
+        let engRateFormatted = ((parseFloat(u.EngagementRate) || 0) * 100).toFixed(1) + '%';
+        let timeFormatted = formatTimeOnPage(u.TimeOnPage);
+        
+        return `
+        <tr class="border-b hover:bg-amber-50 border-l border-gray-100">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-amber-700 font-bold hover:underline block truncate w-40 lg:w-56" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-bold text-gray-600">${traffic}</td>
+            <td class="p-2 text-center text-xs font-medium text-gray-500">${timeFormatted}</td>
+            <td class="p-2 text-center text-xs font-black text-red-500">${engRateFormatted}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-emerald-200 bg-gradient-to-r from-emerald-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('revTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-emerald-800"><i class="fas fa-hand-holding-usd text-emerald-600 mr-2 group-hover:scale-110 transition-transform"></i>Báo Cáo Tiền Tệ & Lỗ Hổng Tương Tác (GA4 Pro)</h2>
+            <button class="bg-emerald-500 hover:bg-emerald-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="revTableArea" class="hidden p-4 bg-emerald-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-emerald-100 rounded shadow-sm leading-relaxed">
+                <i class="fas fa-lightbulb text-emerald-500 mr-1"></i> <b>Chiến lược phân bổ:</b> Bảng bên trái là những trang đang nuôi sống công ty, hãy ưu tiên đưa chúng lên Header/Menu. Bảng bên phải là những trang đang đốt tiền (Khách vào nhưng không thèm cuộn/đọc), hãy sửa lại nội dung phần Mở bài (Sapo) hoặc thay ảnh Thumbnail ngay!
+            </div>
+            <div class="flex flex-col xl:flex-row gap-4">
+                <div class="w-full xl:w-1/2 bg-white border border-emerald-200 rounded-lg shadow-sm">
+                    <div class="bg-emerald-100 text-emerald-800 font-black text-xs uppercase p-3 text-center border-b border-emerald-200">
+                        <i class="fas fa-medal mr-1 text-yellow-600"></i> TOP BÒ SỮA (CONVERSIONS & REVENUE)
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="text-[10px] text-gray-500 bg-gray-50">
+                            <tr><th class="p-2">URL Bán Hàng</th><th class="p-2 text-center w-16">Views</th><th class="p-2 text-center w-16">Đơn/LH</th><th class="p-2 text-right w-24">Doanh Thu</th></tr>
+                        </thead>
+                        <tbody>${rowsRev || '<tr><td colspan="4" class="text-center p-4 text-gray-500 font-medium">Chưa có giao dịch phát sinh</td></tr>'}</tbody>
+                    </table>
+                </div>
+                
+                <div class="w-full xl:w-1/2 bg-white border border-amber-200 rounded-lg shadow-sm">
+                    <div class="bg-amber-100 text-amber-800 font-black text-xs uppercase p-3 text-center border-b border-amber-200">
+                        <i class="fas fa-user-slash mr-1 text-red-500"></i> LỖ HỔNG TƯƠNG TÁC (ENGAGEMENT < 40%)
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="text-[10px] text-gray-500 bg-gray-50">
+                            <tr><th class="p-2">URL Bị Khách Bỏ Rơi</th><th class="p-2 text-center w-16">Views</th><th class="p-2 text-center w-16">Tg Xem</th><th class="p-2 text-center w-20">Tỷ lệ tương tác</th></tr>
+                        </thead>
+                        <tbody>${rowsBadEng || '<tr><td colspan="4" class="text-center p-4 text-green-600 font-medium">Tuyệt vời! Không có trang nào bị rớt tương tác.</td></tr>'}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
 function renderPaginationControls(totalPages) {
     let paginationContainer = document.getElementById('paginationControls');
     if (!paginationContainer) return;
