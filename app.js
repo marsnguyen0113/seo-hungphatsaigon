@@ -118,10 +118,10 @@ async function loadData() {
         renderZombieTool(); 
         renderCTROptimizerTool(); 
         renderArchitectureScannerTool();
-        // 3 TRẠM MỚI TÍCH HỢP
         renderStrikingDistanceTool();
         renderUXScannerTool();
         renderLinkJuiceHubTool();
+        renderRevenueAndEngagementTool();
 
         initFilters();
         processFilters(); 
