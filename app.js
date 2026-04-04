@@ -117,7 +117,7 @@ renderAllCharts(parseInt(tq.tongUrl));
         renderContentDecayTool(); 
         renderZombieTool(); 
         renderCTROptimizerTool(); 
-        
+        renderIntentMismatchTool();
         initFilters();
         processFilters(); 
     } catch (e) { 
