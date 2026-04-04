@@ -117,7 +117,7 @@ async function loadData() {
         renderContentDecayTool(); 
         renderZombieTool(); 
         renderCTROptimizerTool(); 
-        
+        renderArchitectureScannerTool();
         // 3 TRẠM MỚI TÍCH HỢP
         renderStrikingDistanceTool();
         renderUXScannerTool();
@@ -894,7 +894,77 @@ function renderLinkJuiceHubTool() {
         </div>
     `;
 }
+// ==========================================
+// TÍNH NĂNG MỚI 4: TRẠM QUÉT CẤU TRÚC & NGÕ CỤT (DEAD-END & SILO)
+// ==========================================
+function renderArchitectureScannerTool() {
+    let container = document.getElementById('architectureContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'architectureContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
 
+    // 1. Quét trang ngõ cụt: Có Traffic > 10 nhưng KHÔNG CÓ link trỏ ra ngoài (Outlinks = 0)
+    let deadEndPages = globalDetails.filter(u => {
+        let traffic = parseInt(u.TrafficCurrent) || 0;
+        let outlinks = u.Outlinks !== "N/A" && u.Outlinks !== "" ? parseInt(u.Outlinks) : -1;
+        return traffic > 10 && outlinks === 0; 
+    }).sort((a,b) => (parseInt(b.TrafficCurrent)||0) - (parseInt(a.TrafficCurrent)||0)).slice(0, 10);
+
+    // 2. Quét trang vực sâu: Giấu quá sâu (Crawl Depth >= 4) và ít người xem
+    let buriedPages = globalDetails.filter(u => {
+        let depth = u.CrawlDepth !== "N/A" && u.CrawlDepth !== "" ? parseInt(u.CrawlDepth) : 0;
+        let traffic = parseInt(u.TrafficCurrent) || 0;
+        return depth >= 4 && traffic < 50; 
+    }).sort((a,b) => (parseInt(b.CrawlDepth)||0) - (parseInt(a.CrawlDepth)||0)).slice(0, 10);
+
+    if (deadEndPages.length === 0 && buriedPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-slate-50 text-slate-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Cấu trúc website hoàn hảo! Không có trang ngõ cụt hay bị giấu quá sâu.</div>`;
+        return;
+    }
+
+    let rowsDeadEnd = deadEndPages.map((u, i) => `
+        <tr class="border-b border-r border-gray-100 hover:bg-slate-50">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-blue-600 font-medium hover:underline block truncate w-48 lg:w-64" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-bold text-gray-700">${parseInt(u.TrafficCurrent).toLocaleString('vi-VN')}</td>
+            <td class="p-2 text-center text-xs font-black text-red-500">0</td>
+        </tr>
+    `).join('');
+
+    let rowsBuried = buriedPages.map((u, i) => `
+        <tr class="border-b hover:bg-slate-50 border-l border-gray-100">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-orange-600 font-medium hover:underline block truncate w-48 lg:w-64" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-black text-red-500">${parseInt(u.CrawlDepth)}</td>
+        </tr>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('archTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-slate-800"><i class="fas fa-sitemap text-slate-600 mr-2 group-hover:scale-110 transition-transform"></i>Trạm Cấu Trúc Silo & Ngõ Cụt Dòng Chảy</h2>
+            <button class="bg-slate-500 hover:bg-slate-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="archTableArea" class="hidden p-4 bg-slate-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-slate-100 rounded shadow-sm leading-relaxed"><i class="fas fa-info-circle text-slate-500 mr-1"></i> <b>Hướng dẫn hành động:</b><br> 👉 <b>Bảng Trái (Ngõ cụt):</b> Khách đang xem rất nhiều nhưng bài viết không có link đi tiếp. Bạn phải vào chèn ngay 2-3 link dẫn về trang Danh mục để tránh việc khách thoát trang.<br>👉 <b>Bảng Phải (Vực sâu):</b> Các trang bị giấu quá sâu (Phải click 4-5 lần từ trang chủ mới tới). Googlebot cực kỳ lười cào các trang này. Hãy lôi chúng ra đặt trên Sidebar hoặc Menu!</div>
+            <div class="flex flex-col lg:flex-row gap-4">
+                <div class="w-full lg:w-1/2 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <div class="bg-slate-100 text-slate-800 font-black text-xs uppercase p-3 text-center border-b border-slate-200"><i class="fas fa-sign-language mr-1"></i> NGÕ CỤT: Có Traffic nhưng Outlinks = 0</div>
+                    <table class="w-full text-left"><thead class="text-[10px] text-gray-500 bg-gray-50"><tr><th class="p-2">URL Ngõ Cụt</th><th class="p-2 text-center">Traffic</th><th class="p-2 text-center">Outlinks</th></tr></thead><tbody>${rowsDeadEnd || '<tr><td colspan="3" class="text-center p-2 text-green-600 font-bold">Không có lỗi</td></tr>'}</tbody></table>
+                </div>
+                <div class="w-full lg:w-1/2 bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <div class="bg-slate-100 text-slate-800 font-black text-xs uppercase p-3 text-center border-b border-slate-200"><i class="fas fa-level-down-alt mr-1"></i> VỰC SÂU: Crawl Depth >= 4</div>
+                    <table class="w-full text-left"><thead class="text-[10px] text-gray-500 bg-gray-50"><tr><th class="p-2">URL Bị Giấu Kín</th><th class="p-2 text-center">Độ sâu (Depth)</th></tr></thead><tbody>${rowsBuried || '<tr><td colspan="2" class="text-center p-2 text-green-600 font-bold">Không có lỗi</td></tr>'}</tbody></table>
+                </div>
+            </div>
+        </div>
+    `;
+}
 function processFilters() {
     const mainVal = document.getElementById('mainCatFilter') ? document.getElementById('mainCatFilter').value : '';
     const subVal = document.getElementById('subCatFilter') ? document.getElementById('subCatFilter').value : '';
