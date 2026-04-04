@@ -109,7 +109,7 @@ async function loadData() {
         document.getElementById('outdatedContent').textContent = (parseInt(tq.canCapNhat)||0) + (parseInt(tq.loiThoi)||0);
         document.getElementById('recommendUpdate').textContent = tq.loiThoi || '0';
 
-renderAllCharts(parseInt(tq.tongUrl));
+        renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
         renderCannibalizationTool(); 
@@ -117,6 +117,11 @@ renderAllCharts(parseInt(tq.tongUrl));
         renderContentDecayTool(); 
         renderZombieTool(); 
         renderCTROptimizerTool(); 
+        
+        // 3 TRẠM MỚI TÍCH HỢP
+        renderStrikingDistanceTool();
+        renderUXScannerTool();
+        renderLinkJuiceHubTool();
 
         initFilters();
         processFilters(); 
@@ -137,7 +142,7 @@ renderAllCharts(parseInt(tq.tongUrl));
 
 function renderAllCharts(total) {
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
-    const categoryCounts = {}; // Data cho Category Bar Chart
+    const categoryCounts = {}; 
 
     globalDetails.forEach(item => {
         statusCounts[getNormalizedStatus(item.TrangThai)]++;
@@ -146,7 +151,6 @@ function renderAllCharts(total) {
         categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
     });
     
-    // 1. Biểu đồ Status (Cột)
     let statusCtx = document.getElementById('statusChart');
     if (statusCtx) {
         if (charts['statusChart']) charts['statusChart'].destroy();
@@ -157,7 +161,6 @@ function renderAllCharts(total) {
         });
     }
 
-    // 2. TỐI ƯU MỚI: Biểu đồ Category (Thanh ngang - Top 5)
     let catCtx = document.getElementById('categoryBarChart');
     if (catCtx) {
         if (charts['categoryBarChart']) charts['categoryBarChart'].destroy();
@@ -168,7 +171,7 @@ function renderAllCharts(total) {
             type: 'bar',
             data: {
                 labels: sortedCats,
-                datasets: [{ label: 'Số bài viết', data: catData, backgroundColor: '#F97316', borderRadius: 4 }] // Màu Cam
+                datasets: [{ label: 'Số bài viết', data: catData, backgroundColor: '#F97316', borderRadius: 4 }] 
             },
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
         });
@@ -239,7 +242,7 @@ function renderRankTracking() {
         <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white flex justify-between items-center">
             <h2 class="text-lg font-black text-gray-800"><i class="fas fa-trophy text-yellow-500 mr-2"></i>Radar Từ Khóa (Rank Tracking Pro)</h2>
         </div>
-        <div class="overflow-x-auto max-h-96">
+        <div class="overflow-x-auto max-h-96 custom-scrollbar">
             <table class="w-full text-left">
                 <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase font-bold sticky top-0 z-10 shadow-sm">
                     <tr>
@@ -256,14 +259,13 @@ function renderRankTracking() {
     `;
 }
 
-// TỐI ƯU MỚI: Thêm tính năng xuất CSV cho File Cannibalization
 window.exportCannibalizationCSV = function() {
     if (!window.globalCannibalizedList || window.globalCannibalizedList.length === 0) {
         alert("Hiện tại không có dữ liệu xung đột từ khóa để tải xuống!");
         return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Hỗ trợ Tiếng Việt
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
     csvContent += "Tu_Khoa_Xung_Dot,Tong_Clicks_Nhom,Tong_Imp_Nhom,URL_Canh_Tranh,Clicks_URL,Imp_URL,Vi_Tri_URL\n";
 
     window.globalCannibalizedList.forEach(item => {
@@ -353,11 +355,7 @@ function renderCannibalizationTool() {
     }
 
     cannibalized.sort((a, b) => b.totalClicks - a.totalClicks || b.totalImp - a.totalImp);
-    
-    // LƯU TOÀN BỘ VÀO BIẾN GLOBAL ĐỂ EXPORT CSV
     window.globalCannibalizedList = cannibalized;
-
-    // TRÊN GIAO DIỆN CHỈ HIỂN THỊ TOP 20 ĐỂ TRÁNH GIẬT LAG
     let displayList = cannibalized.slice(0, 20);
 
     if (displayList.length === 0) {
@@ -417,13 +415,10 @@ function renderCannibalizationTool() {
         </div>
     `;
 }
-// ==========================================
-// TRẠM 1: TỐI ƯU CTR (MỎ VÀNG TRAFFIC)
-// ==========================================
+
 function renderCTROptimizerTool() {
     let container = document.getElementById('ctrOptimizerContainer');
     if (!container) {
-        // Tìm vị trí để chèn widget này vào (ngay trên bảng Danh mục chính)
         const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
         container = document.createElement('div');
         container.id = 'ctrOptimizerContainer';
@@ -431,22 +426,15 @@ function renderCTROptimizerTool() {
         wrapper.parentNode.insertBefore(container, wrapper);
     }
 
-    // THUẬT TOÁN LỌC: Lấy các trang Top 10, Hiển thị > 50, nhưng CTR < 3%
     let ctrPages = globalDetails.filter(u => {
         let pos = parseFloat(u.GSCPos) || 100;
         let imp = parseInt(u.GSCImp) || 0;
-        
-        // Xử lý chuỗi % để lấy số thực
         let ctrStr = String(u.GSCCTR).replace('%', '').replace(',', '.');
         let ctr = parseFloat(ctrStr) || 0;
-
         return (pos > 0 && pos <= 10) && (imp >= 50) && (ctr < 3.0);
     });
 
-    // Sắp xếp ưu tiên: Trang nào có lượng Hiển thị (Impression) cao nhất thì ưu tiên sửa trước
     ctrPages.sort((a, b) => (parseInt(b.GSCImp) || 0) - (parseInt(a.GSCImp) || 0));
-    
-    // Giới hạn hiển thị Top 20 cơ hội ngon ăn nhất
     ctrPages = ctrPages.slice(0, 20);
 
     if (ctrPages.length === 0) {
@@ -458,11 +446,8 @@ function renderCTROptimizerTool() {
         let pos = parseFloat(u.GSCPos).toFixed(1);
         let imp = parseInt(u.GSCImp).toLocaleString('vi-VN');
         let clicks = parseInt(u.GSCClicks).toLocaleString('vi-VN');
-        
-        // Gắn cảnh báo nếu Title quá ngắn hoặc quá dài
-        let titleLenInfo = u.TitleLen > 60 ? `<span class="text-red-500 font-bold" title="Tiêu đề quá dài (>60 ký tự) sẽ bị Google cắt mất">(${u.TitleLen} ký tự - Dài)</span>` : 
-                          (u.TitleLen < 30 ? `<span class="text-orange-500 font-bold" title="Tiêu đề quá ngắn (<30 ký tự), lãng phí không gian">(${u.TitleLen} ký tự - Ngắn)</span>` : 
-                          `<span class="text-green-600">(${u.TitleLen} ký tự)</span>`);
+        let titleLenInfo = u.TitleLen > 60 ? `<span class="text-red-500 font-bold">(${u.TitleLen} ký tự - Dài)</span>` : 
+                          (u.TitleLen < 30 ? `<span class="text-orange-500 font-bold">(${u.TitleLen} ký tự - Ngắn)</span>` : `<span class="text-green-600">(${u.TitleLen} ký tự)</span>`);
 
         return `
             <tr class="border-b hover:bg-blue-50 transition-colors">
@@ -474,14 +459,8 @@ function renderCTROptimizerTool() {
                 <td class="p-3 text-center text-green-600 font-black">Top ${pos}</td>
                 <td class="p-3 text-center font-bold text-gray-700">${imp}</td>
                 <td class="p-3 text-center font-bold text-gray-500">${clicks}</td>
-                <td class="p-3 text-center">
-                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-black shadow-sm text-[10px]">
-                        <i class="fas fa-exclamation-triangle mr-1"></i>${u.GSCCTR}
-                    </span>
-                </td>
-                <td class="p-3 text-[10px] text-center">
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded shadow-sm w-full font-bold transition-colors">Yêu cầu Re-write</button>
-                </td>
+                <td class="p-3 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded font-black shadow-sm text-[10px]"><i class="fas fa-exclamation-triangle mr-1"></i>${u.GSCCTR}</span></td>
+                <td class="p-3 text-[10px] text-center"><button class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded shadow-sm w-full font-bold transition-colors">Yêu cầu Re-write</button></td>
             </tr>
         `;
     }).join('');
@@ -492,27 +471,17 @@ function renderCTROptimizerTool() {
             <button class="bg-blue-500 hover:bg-blue-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="ctrTableArea" class="hidden overflow-x-auto p-4 bg-blue-50/30">
-            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-blue-100 rounded shadow-sm leading-relaxed">
-                <i class="fas fa-info-circle text-blue-500 mr-1"></i> <b>Insight Hành Động:</b> Đây là các URL đã lọt <b>Top 10 Google</b> và có nhiều lượt hiển thị, nhưng tỷ lệ khách hàng click vào rất thấp (< 3%). <br>
-                👉 <b>Nhiệm vụ:</b> Team Content chỉ cần viết lại <b>Thẻ Tiêu Đề (Meta Title)</b> thêm các từ ngữ kích thích (như: Bảng giá, Cập nhật mới nhất, Ưu đãi, Top...) để giật tít, kéo Traffic về ngay lập tức mà không cần viết lại toàn bộ nội dung bài.
-            </div>
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-blue-100 rounded shadow-sm leading-relaxed"><i class="fas fa-info-circle text-blue-500 mr-1"></i> <b>Insight:</b> Các URL này đã ở <b>Top 10 Google</b> có lượt hiển thị cao, nhưng tỷ lệ Click < 3%. Hãy tối ưu lại <b>Meta Title</b> để giật tít kéo Traffic.</div>
             <table class="w-full text-left bg-white border border-blue-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-blue-100/50 text-[10px] text-blue-800 uppercase font-black">
-                    <tr>
-                        <th class="p-3 w-10">STT</th>
-                        <th class="p-3">Trang Đích & Tiêu đề hiện tại</th>
-                        <th class="p-3 text-center w-20">Vị trí</th>
-                        <th class="p-3 text-center w-24">Hiển thị (Imp)</th>
-                        <th class="p-3 text-center w-20">Clicks</th>
-                        <th class="p-3 text-center w-24">CTR Báo động</th>
-                        <th class="p-3 text-center w-24">Hành động</th>
-                    </tr>
+                    <tr><th class="p-3 w-10">STT</th><th class="p-3">Trang Đích & Tiêu đề hiện tại</th><th class="p-3 text-center w-20">Vị trí</th><th class="p-3 text-center w-24">Hiển thị (Imp)</th><th class="p-3 text-center w-20">Clicks</th><th class="p-3 text-center w-24">CTR Báo động</th><th class="p-3 text-center w-24">Hành động</th></tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
         </div>
     `;
 }
+
 function renderMoneyPagesTool() {
     let container = document.getElementById('moneyPagesContainer');
     if (!container) {
@@ -573,13 +542,7 @@ function renderMoneyPagesTool() {
         <div id="moneyTableArea" class="hidden overflow-x-auto p-4 bg-yellow-50/30">
             <table class="w-full text-left bg-white border border-yellow-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-yellow-100/50 text-[10px] text-yellow-800 uppercase font-black">
-                    <tr>
-                        <th class="p-3 w-10">STT</th>
-                        <th class="p-3">Bài viết "Bò sữa"</th>
-                        <th class="p-3 text-center w-24">Traffic</th>
-                        <th class="p-3 text-center w-32">Tg đọc (Avg)</th>
-                        <th class="p-3 text-center w-32">Chuyển đổi</th>
-                    </tr>
+                    <tr><th class="p-3 w-10">STT</th><th class="p-3">Bài viết "Bò sữa"</th><th class="p-3 text-center w-24">Traffic</th><th class="p-3 text-center w-32">Tg đọc (Avg)</th><th class="p-3 text-center w-32">Chuyển đổi</th></tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -602,7 +565,6 @@ function renderContentDecayTool() {
         let current = parseInt(u.TrafficCurrent) || 0;
         if (last < 20) return false; 
         if (current >= last) return false; 
-        
         let dropRatio = (last - current) / last;
         return dropRatio >= 0.3; 
     });
@@ -633,11 +595,7 @@ function renderContentDecayTool() {
                 </td>
                 <td class="p-3 text-center text-gray-400 font-bold line-through">${last}</td>
                 <td class="p-3 text-center text-red-600 font-black">${current}</td>
-                <td class="p-3 text-center">
-                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-black shadow-sm text-[10px]">
-                        <i class="fas fa-arrow-down mr-1"></i>${dropRatio}% (-${dropAbs})
-                    </span>
-                </td>
+                <td class="p-3 text-center"><span class="bg-red-100 text-red-800 px-2 py-1 rounded font-black shadow-sm text-[10px]"><i class="fas fa-arrow-down mr-1"></i>${dropRatio}% (-${dropAbs})</span></td>
             </tr>
         `;
     }).join('');
@@ -650,13 +608,7 @@ function renderContentDecayTool() {
         <div id="decayTableArea" class="hidden overflow-x-auto p-4 bg-red-50/30">
             <table class="w-full text-left bg-white border border-red-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-red-100/50 text-[10px] text-red-800 uppercase font-black">
-                    <tr>
-                        <th class="p-3 w-10">STT</th>
-                        <th class="p-3">URL Đang Suy Thoái</th>
-                        <th class="p-3 text-center w-24">Traffic Tháng Trước</th>
-                        <th class="p-3 text-center w-24">Traffic Hiện Tại</th>
-                        <th class="p-3 text-center w-32">Mức Độ Tụt Hạng</th>
-                    </tr>
+                    <tr><th class="p-3 w-10">STT</th><th class="p-3">URL Đang Suy Thoái</th><th class="p-3 text-center w-24">Traffic Tháng Trước</th><th class="p-3 text-center w-24">Traffic Hiện Tại</th><th class="p-3 text-center w-32">Mức Độ Tụt Hạng</th></tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -677,7 +629,6 @@ function renderZombieTool() {
     const zombies = globalDetails.filter(u => {
         const noTraffic = (parseInt(u.TrafficCurrent) || 0) === 0;
         const noGscClicks = (parseInt(u.GSCClicks) || 0) === 0;
-        
         const thinContent = (parseInt(u.WordCount) || 0) < 300;
         const orphan = (parseInt(u.Inlinks) || 0) === 0;
         const nonIndexable = String(u.Indexability).includes('Non');
@@ -728,15 +679,218 @@ function renderZombieTool() {
         <div id="zombieTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
             <table class="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-bold">
-                    <tr>
-                        <th class="p-3 w-10">STT</th>
-                        <th class="p-3">URL Thây ma</th>
-                        <th class="p-3 w-40">Nguyên nhân</th>
-                        <th class="p-3 w-64">AI Gợi ý xử lý</th>
-                    </tr>
+                    <tr><th class="p-3 w-10">STT</th><th class="p-3">URL Thây ma</th><th class="p-3 w-40">Nguyên nhân</th><th class="p-3 w-64">AI Gợi ý xử lý</th></tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
+        </div>
+    `;
+}
+
+// ==========================================
+// TÍNH NĂNG MỚI 1: TRẠM BỆ PHÓNG TRANG 2 (STRIKING DISTANCE)
+// ==========================================
+function renderStrikingDistanceTool() {
+    let container = document.getElementById('strikingDistanceContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'strikingDistanceContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-teal-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    let strikingPages = globalDetails.filter(u => {
+        let pos = parseFloat(u.GSCPos) || 0;
+        let imp = parseInt(u.GSCImp) || 0;
+        return pos > 10.0 && pos <= 20.0 && imp > 50; 
+    });
+
+    strikingPages.sort((a, b) => (parseInt(b.GSCImp) || 0) - (parseInt(a.GSCImp) || 0));
+    strikingPages = strikingPages.slice(0, 15);
+
+    if (strikingPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-teal-50 text-teal-700 font-bold"><i class="fas fa-rocket mr-2"></i>Hiện không có bài viết nào ở Trang 2 thỏa điều kiện bệ phóng.</div>`;
+        return;
+    }
+
+    let rows = strikingPages.map((u, i) => {
+        let pos = parseFloat(u.GSCPos).toFixed(1);
+        let imp = parseInt(u.GSCImp).toLocaleString('vi-VN');
+        let inlinks = parseInt(u.Inlinks) || 0;
+
+        return `
+            <tr class="border-b hover:bg-teal-50 transition-colors">
+                <td class="p-3 text-xs text-teal-600 font-black">${i+1}</td>
+                <td class="p-3 text-xs">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block break-all mb-1">${u.URL}</a>
+                    <div class="text-[11px] text-gray-700 font-medium">Internal Links hiện tại: <span class="${inlinks < 3 ? 'text-red-500 font-bold' : 'text-teal-600'}">${inlinks} links</span></div>
+                </td>
+                <td class="p-3 text-center text-teal-700 font-black">Top ${pos}</td>
+                <td class="p-3 text-center font-bold text-gray-700">${imp}</td>
+                <td class="p-3 text-[10px] text-center"><button class="bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded shadow-sm w-full font-bold transition-colors"><i class="fas fa-link mr-1"></i> Bơm thêm Link</button></td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-teal-200 bg-gradient-to-r from-teal-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('strikingTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-teal-800"><i class="fas fa-rocket text-teal-600 mr-2 group-hover:-translate-y-1 transition-transform"></i>Trạm Bệ Phóng Trang 2 (Striking Distance) <span class="bg-teal-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${strikingPages.length} Cơ hội</span></h2>
+            <button class="bg-teal-500 hover:bg-teal-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="strikingTableArea" class="hidden overflow-x-auto p-4 bg-teal-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-teal-100 rounded shadow-sm leading-relaxed"><i class="fas fa-info-circle text-teal-500 mr-1"></i> <b>Insight:</b> Các trang này đang kẹt ở vị trí 11-20 nhưng có lượng tìm kiếm (Impression) rất cao. Chỉ cần Bơm thêm 3-5 Internal Links hoặc cập nhật lại 1 đoạn nội dung nhỏ là sẽ lọt Top 10 dễ dàng.</div>
+            <table class="w-full text-left bg-white border border-teal-200 rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-teal-100/50 text-[10px] text-teal-800 uppercase font-black">
+                    <tr><th class="p-3 w-10">STT</th><th class="p-3">Trang chờ lên Top 10</th><th class="p-3 text-center w-20">Vị trí (GSC)</th><th class="p-3 text-center w-24">Hiển thị (Imp)</th><th class="p-3 text-center w-32">Hành động</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// ==========================================
+// TÍNH NĂNG MỚI 2: BÁO ĐỘNG TRẢI NGHIỆM ĐỌC (UX SCANNER)
+// ==========================================
+function renderUXScannerTool() {
+    let container = document.getElementById('uxScannerContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'uxScannerContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-rose-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    let badUXPages = globalDetails.filter(u => {
+        let traffic = parseInt(u.TrafficCurrent) || 0;
+        let words = parseInt(u.WordCount) || 0;
+        let time = parseFloat(u.TimeOnPage) || 0;
+
+        if (traffic < 30) return false; 
+        
+        let expectedTimeSeconds = (words / 250) * 60; // 250 chữ/phút
+
+        if (words >= 800 && time < 45) return true; // Bài rất dài nhưng đọc quá nhanh (Bounce)
+        if (expectedTimeSeconds > 0 && (time / expectedTimeSeconds) < 0.20 && time < 60) return true; 
+
+        return false;
+    });
+
+    badUXPages.sort((a, b) => (parseInt(b.TrafficCurrent) || 0) - (parseInt(a.TrafficCurrent) || 0));
+    badUXPages = badUXPages.slice(0, 15);
+
+    if (badUXPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Trải nghiệm tuyệt vời! Không phát hiện bài viết nào có tỷ lệ thoát/chán đọc cao.</div>`;
+        return;
+    }
+
+    let rows = badUXPages.map((u, i) => {
+        let traffic = parseInt(u.TrafficCurrent).toLocaleString('vi-VN');
+        let words = parseInt(u.WordCount).toLocaleString('vi-VN');
+        let actualTime = formatTimeOnPage(u.TimeOnPage);
+        
+        let expectedTime = Math.round((u.WordCount / 250) * 60);
+        let expectedTimeStr = formatTimeOnPage(expectedTime);
+
+        return `
+            <tr class="border-b hover:bg-rose-50 transition-colors">
+                <td class="p-3 text-xs text-rose-600 font-black">${i+1}</td>
+                <td class="p-3 text-xs">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block break-all mb-1">${u.URL}</a>
+                </td>
+                <td class="p-3 text-center font-bold text-gray-700">${traffic}</td>
+                <td class="p-3 text-center font-bold text-gray-500">${words} chữ</td>
+                <td class="p-3 text-center text-gray-400 font-medium">~${expectedTimeStr}</td>
+                <td class="p-3 text-center text-rose-600 font-black"><i class="fas fa-level-down-alt mr-1"></i>${actualTime}</td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-rose-200 bg-gradient-to-r from-rose-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('uxTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-rose-800"><i class="fas fa-user-clock text-rose-600 mr-2 group-hover:animate-pulse"></i>Báo Động Trải Nghiệm Đọc (UX / Helpful Content) <span class="bg-rose-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${badUXPages.length} Cảnh Báo</span></h2>
+            <button class="bg-rose-500 hover:bg-rose-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="uxTableArea" class="hidden overflow-x-auto p-4 bg-rose-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-rose-100 rounded shadow-sm leading-relaxed"><i class="fas fa-exclamation-triangle text-rose-500 mr-1"></i> <b>Insight:</b> Hệ thống toán học đã tính ra Thời gian đọc mong đợi dựa trên Số chữ (Word Count). Các URL này viết rất dài, kéo được Traffic, nhưng <b>Thời gian đọc thực tế từ GA4 quá thấp</b>. Rất dễ bị dính thuật toán Helpful Content. Hãy vào thêm <b>Hình ảnh, Mục lục, Đoạn tóm tắt</b> để giữ chân khách.</div>
+            <table class="w-full text-left bg-white border border-rose-200 rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-rose-100/50 text-[10px] text-rose-800 uppercase font-black">
+                    <tr><th class="p-3 w-10">STT</th><th class="p-3">Bài viết làm khách chán</th><th class="p-3 text-center w-20">Traffic</th><th class="p-3 text-center w-24">Số chữ (Word)</th><th class="p-3 text-center w-24">Đáng lẽ đọc...</th><th class="p-3 text-center w-24">Thực tế đọc</th></tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// ==========================================
+// TÍNH NĂNG MỚI 3: ĐIỀU PHỐI LINK JUICE (INTERNAL LINK HUB)
+// ==========================================
+function renderLinkJuiceHubTool() {
+    let container = document.getElementById('linkJuiceContainer');
+    if (!container) {
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'linkJuiceContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-indigo-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
+
+    // List 1: Bơm máu (Hub) -> Có traffic > 50, Conversion = 0
+    let hubPages = globalDetails.filter(u => {
+        return (parseInt(u.TrafficCurrent) || 0) > 50 && (parseFloat(u.Conversions) || 0) === 0;
+    }).sort((a,b) => (parseInt(b.TrafficCurrent)||0) - (parseInt(a.TrafficCurrent)||0)).slice(0, 10);
+
+    // List 2: Bị đói Link -> Là trang Sản phẩm / Danh mục, Inlinks < 5
+    let starvingPages = globalDetails.filter(u => {
+        let url = String(u.URL).toLowerCase();
+        let isProduct = url.includes('/danh-muc/') || url.includes('/shop/');
+        let inlinks = parseInt(u.Inlinks) || 0;
+        return isProduct && inlinks < 5;
+    }).sort((a,b) => (parseInt(a.Inlinks)||0) - (parseInt(b.Inlinks)||0)).slice(0, 10);
+
+    if (hubPages.length === 0 && starvingPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Dòng chảy sức mạnh Nội bộ đang hoàn hảo!</div>`;
+        return;
+    }
+
+    let rowsHub = hubPages.map((u, i) => `
+        <tr class="border-b border-r border-gray-100 hover:bg-indigo-50">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-blue-600 font-medium hover:underline block truncate w-48 lg:w-64" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-bold text-gray-700">${parseInt(u.TrafficCurrent)}</td>
+        </tr>
+    `).join('');
+
+    let rowsStarve = starvingPages.map((u, i) => `
+        <tr class="border-b hover:bg-orange-50 border-l border-gray-100">
+            <td class="p-2 text-[11px]">
+                <a href="${u.URL}" target="_blank" class="text-orange-600 font-medium hover:underline block truncate w-48 lg:w-64" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')}</a>
+            </td>
+            <td class="p-2 text-center text-xs font-black text-red-500">${parseInt(u.Inlinks)}</td>
+        </tr>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-indigo-200 bg-gradient-to-r from-indigo-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('juiceTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-indigo-800"><i class="fas fa-project-diagram text-indigo-600 mr-2"></i>Trạm Điều Phối Link Juice (Tránh lãng phí sức mạnh)</h2>
+            <button class="bg-indigo-500 hover:bg-indigo-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="juiceTableArea" class="hidden p-4 bg-indigo-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-indigo-100 rounded shadow-sm leading-relaxed"><i class="fas fa-info-circle text-indigo-500 mr-1"></i> <b>Hướng dẫn hành động:</b> Trạm này chia làm 2 bên. Hãy copy (đặt link) từ bảng bên Trái, cắm trỏ về các trang bên Phải để luân chuyển dòng chảy SEO (PageRank).</div>
+            <div class="flex flex-col lg:flex-row gap-4">
+                <div class="w-full lg:w-1/2 bg-white border border-indigo-200 rounded-lg shadow-sm">
+                    <div class="bg-indigo-100 text-indigo-800 font-black text-xs uppercase p-3 text-center border-b border-indigo-200"><i class="fas fa-tint mr-1"></i> HUB: Trang kéo Traffic nhưng 0 Đơn (Nên đặt link)</div>
+                    <table class="w-full text-left"><thead class="text-[10px] text-gray-500 bg-gray-50"><tr><th class="p-2">URL Bài Bơm Máu</th><th class="p-2 text-center">Traffic</th></tr></thead><tbody>${rowsHub}</tbody></table>
+                </div>
+                <div class="w-full lg:w-1/2 bg-white border border-orange-200 rounded-lg shadow-sm">
+                    <div class="bg-orange-100 text-orange-800 font-black text-xs uppercase p-3 text-center border-b border-orange-200"><i class="fas fa-heartbeat mr-1"></i> TARGET: Trang Bán Hàng đói Link (Cần nhận link)</div>
+                    <table class="w-full text-left"><thead class="text-[10px] text-gray-500 bg-gray-50"><tr><th class="p-2">URL Danh mục/Sản phẩm</th><th class="p-2 text-center">Inlinks đang có</th></tr></thead><tbody>${rowsStarve}</tbody></table>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -889,7 +1043,6 @@ function renderPaginationControls(totalPages) {
 
     let buttons = '';
     
-    // Nút Trang trước
     buttons += `<button onclick="changePage(${currentPage - 1})" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-orange-50 disabled:opacity-50 text-sm font-bold transition-colors" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
 
     for (let i = 1; i <= totalPages; i++) {
@@ -904,7 +1057,6 @@ function renderPaginationControls(totalPages) {
         }
     }
 
-    // Nút Trang sau
     buttons += `<button onclick="changePage(${currentPage + 1})" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-orange-50 disabled:opacity-50 text-sm font-bold transition-colors" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
 
     paginationContainer.innerHTML = buttons;
