@@ -117,7 +117,7 @@ renderAllCharts(parseInt(tq.tongUrl));
         renderContentDecayTool(); 
         renderZombieTool(); 
         renderCTROptimizerTool(); 
-        renderIntentMismatchTool();
+
         initFilters();
         processFilters(); 
     } catch (e) { 
@@ -506,109 +506,6 @@ function renderCTROptimizerTool() {
                         <th class="p-3 text-center w-20">Clicks</th>
                         <th class="p-3 text-center w-24">CTR Báo động</th>
                         <th class="p-3 text-center w-24">Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-        </div>
-    `;
-}
-// ==========================================
-// TRẠM 2: RỚT TRANG ĐÍCH (INTENT MISMATCH)
-// ==========================================
-function renderIntentMismatchTool() {
-    let container = document.getElementById('intentMismatchContainer');
-    if (!container) {
-        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
-        container = document.createElement('div');
-        container.id = 'intentMismatchContainer';
-        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-pink-200 overflow-hidden';
-        wrapper.parentNode.insertBefore(container, wrapper);
-    }
-
-    if (!canniData || canniData.length === 0) {
-        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Chưa có dữ liệu kiểm tra rớt trang đích.</div>`;
-        return;
-    }
-
-    // 1. Tập hợp các từ khóa mang ý nghĩa Mua Bán (Transactional)
-    const transactionalKeywords = ['giá', 'mua', 'bán', 'rẻ', 'cửa hàng', 'showroom', 'thanh lý', 'khuyến mãi', 'báo giá'];
-
-    let mismatches = [];
-
-    // 2. Thuật toán phân tích
-    canniData.forEach(row => {
-        let kw = String(row.Keyword).trim().toLowerCase();
-        let url = String(row.URL).trim();
-        
-        // Kiểm tra xem từ khóa có chứa ý định mua bán không?
-        let isTransactional = transactionalKeywords.some(t => kw.includes(t));
-        
-        // Dựa vào cấu trúc Hưng Phát: Bài viết tin tức thường có đuôi .html, Danh mục thì không.
-        let isArticlePage = url.endsWith('.html'); 
-
-        // Nếu từ khóa là "Mua bán" NHƯNG Google lại đưa bài "Tin tức" lên Top -> Lỗi Intent
-        if (isTransactional && isArticlePage && (parseInt(row.Impressions) > 20)) {
-            mismatches.push({
-                Keyword: kw,
-                URL: url,
-                Clicks: parseInt(row.Clicks) || 0,
-                Impressions: parseInt(row.Impressions) || 0,
-                Position: parseFloat(row.Position).toFixed(1)
-            });
-        }
-    });
-
-    // Sắp xếp ưu tiên: Từ khóa nào hiển thị nhiều nhất nhưng bị rớt trang đích -> Sửa trước
-    mismatches.sort((a, b) => b.Impressions - a.Impressions);
-    
-    // Cắt Top 15 lỗi nghiêm trọng nhất
-    let displayList = mismatches.slice(0, 15);
-
-    if (displayList.length === 0) {
-        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-bullseye mr-2"></i>Tuyệt vời! Không phát hiện lỗi sai lệch Trang đích (Search Intent). Tất cả key bán hàng đều về đúng danh mục.</div>`;
-        return;
-    }
-
-    let rows = displayList.map((item, i) => {
-        return `
-            <tr class="border-b hover:bg-pink-50 transition-colors">
-                <td class="p-3 text-xs text-pink-600 font-black">${i+1}</td>
-                <td class="p-3 text-xs text-gray-800 font-bold">${item.Keyword}</td>
-                <td class="p-3 text-xs">
-                    <a href="${item.URL}" target="_blank" class="text-blue-600 hover:underline block break-all font-medium">${item.URL.replace('https://hungphatsaigon.vn', '')}</a>
-                    <div class="text-[10px] text-red-500 mt-1 font-bold"><i class="fas fa-times-circle mr-1"></i>Nên lên Top bằng trang /danh-muc/ thay vì .html</div>
-                </td>
-                <td class="p-3 text-center text-gray-600 font-bold">${item.Impressions}</td>
-                <td class="p-3 text-center text-blue-600 font-bold">${item.Clicks}</td>
-                <td class="p-3 text-center font-bold">Top ${item.Position}</td>
-                <td class="p-3 text-[10px]">
-                    <button class="bg-pink-600 hover:bg-pink-700 text-white px-2 py-1 rounded shadow-sm w-full font-bold transition-colors">Chèn Banner / Nút Mua</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    container.innerHTML = `
-        <div class="px-6 py-4 border-b border-pink-200 bg-gradient-to-r from-pink-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('intentTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-pink-800"><i class="fas fa-exchange-alt text-pink-600 mr-2 group-hover:rotate-180 transition-transform duration-500"></i>Trạm Báo Động Rớt Trang Đích (Intent Mismatch) <span class="bg-pink-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${mismatches.length} Cảnh Báo</span></h2>
-            <button class="bg-pink-500 hover:bg-pink-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
-        </div>
-        <div id="intentTableArea" class="hidden overflow-x-auto p-4 bg-pink-50/30">
-            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-pink-100 rounded shadow-sm leading-relaxed">
-                <i class="fas fa-exclamation-circle text-pink-500 mr-1"></i> <b>Hành động ưu tiên:</b> Khách hàng đang search các từ khóa có <b>ý định mua hàng (giá, cửa hàng, thanh lý)</b> nhưng Google lại đưa họ vào đọc các <b>bài viết tin tức (.html)</b>.<br>
-                👉 <b>Giải pháp cho Team SEO/Content:</b> Vào ngay các bài viết (.html) bị cảnh báo ở dưới, chèn thêm các <b>Banner Giảm Giá, Nút Gọi, hoặc Internal Link to</b> trỏ thẳng về trang Danh mục sản phẩm tương ứng để "hớt" lượng khách hàng này, không để họ thoát trang!
-            </div>
-            <table class="w-full text-left bg-white border border-pink-200 rounded-lg overflow-hidden shadow-sm">
-                <thead class="bg-pink-100/50 text-[10px] text-pink-800 uppercase font-black">
-                    <tr>
-                        <th class="p-3 w-10">STT</th>
-                        <th class="p-3 w-40">Từ khóa (Khách muốn mua)</th>
-                        <th class="p-3">Bài viết đang ăn Top nhầm</th>
-                        <th class="p-3 text-center w-20">Hiển thị</th>
-                        <th class="p-3 text-center w-20">Clicks</th>
-                        <th class="p-3 text-center w-20">Vị trí</th>
-                        <th class="p-3 text-center w-32">AI Gợi ý Xử lý</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
