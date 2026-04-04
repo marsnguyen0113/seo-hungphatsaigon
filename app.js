@@ -12,6 +12,9 @@ let currentFilteredGroups = [];
 let currentPage = 1;
 const ITEMS_PER_PAGE = 20; // Hiển thị 20 danh mục mỗi trang để load mượt nhất
 
+// BIẾN LƯU DỮ LIỆU EXPORT CANNIBALIZATION
+window.globalCannibalizedList = [];
+
 function formatDisplayDate(dateStr) {
     const d = parseDate(dateStr);
     if (!d || isNaN(d)) return 'N/A';
@@ -55,21 +58,31 @@ function initFilters() {
     
     // Gắn sự kiện khi filter thay đổi -> reset về trang 1
     ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-            currentPage = 1;
-            processFilters();
-        });
+        let el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', () => {
+                currentPage = 1;
+                processFilters();
+            });
+        }
     });
 
-    document.getElementById('resetFilterBtn').onclick = () => {
-        ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => document.getElementById(id).value = '');
-        currentPage = 1;
-        processFilters();
-    };
+    let resetBtn = document.getElementById('resetFilterBtn');
+    if(resetBtn) {
+        resetBtn.onclick = () => {
+            ['mainCatFilter', 'subCatFilter', 'statusFilter', 'urlSearch'].forEach(id => {
+                let el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+            currentPage = 1;
+            processFilters();
+        };
+    }
 }
 
 async function loadData() {
     const tbody = document.getElementById('categoryAccordionBody');
+    if(!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Đang kết nối API để tải dữ liệu...</td></tr>';
     try {
         const response = await fetch(API_URL);
@@ -105,7 +118,6 @@ async function loadData() {
         renderZombieTool(); 
         
         initFilters();
-        // Gọi hàm xử lý lọc thay vì render trực tiếp
         processFilters(); 
     } catch (e) { 
         console.error("LỖI HỆ THỐNG:", e); 
@@ -124,16 +136,46 @@ async function loadData() {
 
 function renderAllCharts(total) {
     const statusCounts = { fresh: 0, recent: 0, stale: 0, outdated: 0 };
-    globalDetails.forEach(item => statusCounts[getNormalizedStatus(item.TrangThai)]++);
-    
-    if (charts['statusChart']) charts['statusChart'].destroy();
-    charts['statusChart'] = new Chart(document.getElementById('statusChart'), {
-        type: 'bar',
-        data: { labels: ['Mới', 'Gần đây', 'Sắp cũ', 'Lỗi thời'], datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    const categoryCounts = {}; // Data cho Category Bar Chart
+
+    globalDetails.forEach(item => {
+        statusCounts[getNormalizedStatus(item.TrangThai)]++;
+        
+        let cat = item.DanhMucChinh || 'Khác';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
     });
+    
+    // 1. Biểu đồ Status (Cột)
+    let statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        if (charts['statusChart']) charts['statusChart'].destroy();
+        charts['statusChart'] = new Chart(statusCtx, {
+            type: 'bar',
+            data: { labels: ['Mới', 'Gần đây', 'Sắp cũ', 'Lỗi thời'], datasets: [{ data: [statusCounts.fresh, statusCounts.recent, statusCounts.stale, statusCounts.outdated], backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'], borderRadius: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    // 2. TỐI ƯU MỚI: Biểu đồ Category (Thanh ngang - Top 5)
+    let catCtx = document.getElementById('categoryBarChart');
+    if (catCtx) {
+        if (charts['categoryBarChart']) charts['categoryBarChart'].destroy();
+        const sortedCats = Object.keys(categoryCounts).sort((a, b) => categoryCounts[b] - categoryCounts[a]).slice(0, 5);
+        const catData = sortedCats.map(c => categoryCounts[c]);
+
+        charts['categoryBarChart'] = new Chart(catCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedCats,
+                datasets: [{ label: 'Số bài viết', data: catData, backgroundColor: '#F97316', borderRadius: 4 }] // Màu Cam
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+        });
+    }
+
     const health = total > 0 ? Math.round(100 - ((statusCounts.outdated / total) * 100)) : 0;
-    document.getElementById('healthScoreValue').textContent = health;
+    let healthEl = document.getElementById('healthScoreValue');
+    if(healthEl) healthEl.textContent = health;
 }
 
 function renderTop10Priority() {
@@ -142,11 +184,11 @@ function renderTop10Priority() {
     const tbody = document.getElementById('priorityUrlsTable');
     if (!tbody) return;
     tbody.innerHTML = list.slice(0, 10).map((u, i) => `
-        <tr class="border-b text-xs">
+        <tr class="border-b text-xs hover:bg-gray-50">
             <td class="p-2 text-gray-400 font-bold">${i+1}</td>
-            <td class="p-2 text-blue-600">${u.URL.replace('https://hungphatsaigon.vn/','')}</td>
-            <td class="p-2 text-center">${formatDisplayDate(u.NgayCapNhat)}</td>
-            <td class="p-2 text-center"><span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold">${u.TrangThai}</span></td>
+            <td class="p-2 text-blue-600 truncate max-w-[200px]" title="${u.URL}"><a href="${u.URL}" target="_blank">${u.URL.replace('https://hungphatsaigon.vn/','')}</a></td>
+            <td class="p-2 text-center text-gray-500">${formatDisplayDate(u.NgayCapNhat)}</td>
+            <td class="p-2 text-center"><span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[10px] uppercase">${u.TrangThai}</span></td>
         </tr>`).join('');
 }
 
@@ -179,7 +221,7 @@ function renderRankTracking() {
         let posBadge = pos <= 3 ? 'bg-green-100 text-green-700' : (pos <= 10 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600');
         
         return `
-            <tr class="border-b ${isLowHanging}">
+            <tr class="border-b ${isLowHanging} transition-colors">
                 <td class="p-3 text-sm font-bold text-gray-800">${kw.Keyword} ${alertTag}</td>
                 <td class="p-3 text-center text-blue-600 font-bold">${parseInt(kw.Clicks).toLocaleString('vi-VN')}</td>
                 <td class="p-3 text-center text-gray-600">${parseInt(kw.Impressions).toLocaleString('vi-VN')}</td>
@@ -198,7 +240,7 @@ function renderRankTracking() {
         </div>
         <div class="overflow-x-auto max-h-96">
             <table class="w-full text-left">
-                <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase font-bold sticky top-0 z-10">
+                <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase font-bold sticky top-0 z-10 shadow-sm">
                     <tr>
                         <th class="p-3">Từ khóa mục tiêu</th>
                         <th class="p-3 text-center">Clicks</th>
@@ -213,6 +255,40 @@ function renderRankTracking() {
     `;
 }
 
+// TỐI ƯU MỚI: Thêm tính năng xuất CSV cho File Cannibalization
+window.exportCannibalizationCSV = function() {
+    if (!window.globalCannibalizedList || window.globalCannibalizedList.length === 0) {
+        alert("Hiện tại không có dữ liệu xung đột từ khóa để tải xuống!");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Hỗ trợ Tiếng Việt
+    csvContent += "Tu_Khoa_Xung_Dot,Tong_Clicks_Nhom,Tong_Imp_Nhom,URL_Canh_Tranh,Clicks_URL,Imp_URL,Vi_Tri_URL\n";
+
+    window.globalCannibalizedList.forEach(item => {
+        item.urls.forEach(u => {
+            let row = [
+                `"${item.keyword}"`,
+                item.totalClicks,
+                item.totalImp,
+                `"${u.URL}"`,
+                u.Clicks,
+                u.Impressions,
+                u.Position
+            ];
+            csvContent += row.join(",") + "\n";
+        });
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "HungPhat_BaoCao_Cannibalization.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 function renderCannibalizationTool() {
     let container = document.getElementById('canniToolContainer');
     if (!container) {
@@ -224,7 +300,7 @@ function renderCannibalizationTool() {
     }
 
     if (!canniData || canniData.length === 0) {
-        container.innerHTML = `<div class="px-6 py-4 bg-gray-50 text-gray-700 font-bold"><i class="fas fa-info-circle mr-2"></i>Chưa có dữ liệu Cannibalization.</div>`;
+        container.innerHTML = `<div class="px-6 py-4 bg-gray-50 text-gray-700 font-bold"><i class="fas fa-info-circle mr-2"></i>Chưa có dữ liệu Cannibalization. Hãy kiểm tra Backend.</div>`;
         return;
     }
 
@@ -276,18 +352,23 @@ function renderCannibalizationTool() {
     }
 
     cannibalized.sort((a, b) => b.totalClicks - a.totalClicks || b.totalImp - a.totalImp);
-    cannibalized = cannibalized.slice(0, 20);
+    
+    // LƯU TOÀN BỘ VÀO BIẾN GLOBAL ĐỂ EXPORT CSV
+    window.globalCannibalizedList = cannibalized;
 
-    if (cannibalized.length === 0) {
+    // TRÊN GIAO DIỆN CHỈ HIỂN THỊ TOP 20 ĐỂ TRÁNH GIẬT LAG
+    let displayList = cannibalized.slice(0, 20);
+
+    if (displayList.length === 0) {
         container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Tuyệt vời! Không phát hiện URL nào xung đột từ khóa.</div>`;
         return;
     }
 
-    let rows = cannibalized.map((item) => {
+    let rows = displayList.map((item) => {
         let urlRows = item.urls.map((u, index) => {
             let badge = index === 0 ? `<span class="bg-green-100 text-green-700 px-1 py-0.5 rounded text-[8px] uppercase font-bold ml-2">Đang Top</span>` : `<span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[8px] uppercase font-bold ml-2">Đang phá</span>`;
             return `
-                <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-50 border-dashed last:border-0 last:mb-0 last:pb-0">
+                <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-50 border-dashed last:border-0 last:mb-0 last:pb-0 hover:bg-gray-100 rounded px-1">
                     <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] hover:underline truncate w-2/3" title="${u.URL}">${u.URL.replace('https://hungphatsaigon.vn', '')} ${badge}</a>
                     <div class="text-[10px] text-gray-500 w-1/3 text-right">
                         <span class="font-bold text-blue-600">${u.Clicks} Clicks</span> | ${u.Impressions} Imp (Top ${parseFloat(u.Position).toFixed(1)})
@@ -303,17 +384,20 @@ function renderCannibalizationTool() {
                 <td class="p-3 text-xs text-center text-gray-500 bg-gray-50/30">${item.totalImp}</td>
                 <td class="p-3">${urlRows}</td>
                 <td class="p-3 text-[10px]">
-                    <button class="bg-gray-800 hover:bg-black text-white px-2 py-1 rounded shadow-sm block w-full text-center mb-1">Gộp bài</button>
-                    <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-2 py-1 rounded shadow-sm block w-full text-center">Cắm Canonical</button>
+                    <button class="bg-gray-800 hover:bg-black text-white px-2 py-1 rounded shadow-sm block w-full text-center mb-1 transition-colors">Gộp bài</button>
+                    <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-2 py-1 rounded shadow-sm block w-full text-center transition-colors">Cắm Canonical</button>
                 </td>
             </tr>
         `;
     }).join('');
 
     container.innerHTML = `
-        <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-gray-800 to-gray-700 flex justify-between items-center cursor-pointer" onclick="document.getElementById('canniTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-white"><i class="fas fa-skull-crossbones text-red-400 mr-2"></i>Radar Ăn Thịt Từ Khóa (Cannibalization) <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${cannibalized.length} Lỗi Khẩn Cấp</span></h2>
-            <button class="bg-gray-600 hover:bg-gray-500 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-gray-800 to-gray-700 flex justify-between items-center cursor-pointer group" onclick="document.getElementById('canniTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-white"><i class="fas fa-skull-crossbones text-red-400 mr-2 group-hover:animate-pulse"></i>Radar Ăn Thịt Từ Khóa (Cannibalization) <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${cannibalized.length} Lỗi Xung Đột</span></h2>
+            <div>
+                <button onclick="event.stopPropagation(); exportCannibalizationCSV()" class="bg-green-600 hover:bg-green-500 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm mr-2"><i class="fas fa-file-excel mr-1"></i> Xuất CSV Tât Cả</button>
+                <button class="bg-gray-600 hover:bg-gray-500 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Thu/Phóng Top 20 <i class="fas fa-chevron-down ml-1"></i></button>
+            </div>
         </div>
         <div id="canniTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
             <div class="text-xs text-gray-600 mb-3 italic">* Cảnh báo: Các URL bên dưới đang tự cạnh tranh nhau trên kết quả tìm kiếm cho cùng 1 từ khóa. Cần chọn ra 1 URL chính và xử lý các URL phụ.</div>
@@ -386,8 +470,8 @@ function renderMoneyPagesTool() {
     }).join('');
 
     container.innerHTML = `
-        <div class="px-6 py-4 border-b border-yellow-200 bg-gradient-to-r from-yellow-100 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('moneyTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-yellow-800"><i class="fas fa-coins text-yellow-600 mr-2"></i>Trạm Săn Money Pages (GA4) <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">Top ${moneyPages.length}</span></h2>
+        <div class="px-6 py-4 border-b border-yellow-200 bg-gradient-to-r from-yellow-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('moneyTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-yellow-800"><i class="fas fa-coins text-yellow-600 mr-2 group-hover:text-yellow-500 transition-colors"></i>Trạm Săn Money Pages (GA4) <span class="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">Top ${moneyPages.length}</span></h2>
             <button class="bg-yellow-500 hover:bg-yellow-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="moneyTableArea" class="hidden overflow-x-auto p-4 bg-yellow-50/30">
@@ -463,8 +547,8 @@ function renderContentDecayTool() {
     }).join('');
 
     container.innerHTML = `
-        <div class="px-6 py-4 border-b border-red-200 bg-gradient-to-r from-red-100 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('decayTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-red-800"><i class="fas fa-chart-line fa-flip-vertical text-red-600 mr-2"></i>Trạm Cảnh Báo Suy Thoái Nội Dung <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${decayingPages.length} Bài Rớt Hạng</span></h2>
+        <div class="px-6 py-4 border-b border-red-200 bg-gradient-to-r from-red-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('decayTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-red-800"><i class="fas fa-chart-line fa-flip-vertical text-red-600 mr-2 group-hover:-translate-y-1 transition-transform"></i>Trạm Cảnh Báo Suy Thoái Nội Dung <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${decayingPages.length} Bài Rớt Hạng</span></h2>
             <button class="bg-red-500 hover:bg-red-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="decayTableArea" class="hidden overflow-x-auto p-4 bg-red-50/30">
@@ -516,37 +600,37 @@ function renderZombieTool() {
         
         if ((parseInt(u.WordCount) || 0) < 300) {
             reasons.push('<span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[9px] uppercase font-bold mb-1 inline-block">Nội dung mỏng</span>');
-            actions.push('Bổ sung thêm content hoặc Gộp với bài khác');
+            actions.push('Bổ sung content hoặc Gộp bài');
         }
         if ((parseInt(u.Inlinks) || 0) === 0) {
             reasons.push('<span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[9px] uppercase font-bold mb-1 inline-block">Trang mồ côi</span>');
-            actions.push('Chèn Internal link từ trang chủ/chuyên mục');
+            actions.push('Bơm Internal link từ chuyên mục');
         }
         if (String(u.Indexability).includes('Non')) {
             reasons.push('<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[9px] uppercase font-bold inline-block">Bị chặn Index</span>');
-            actions.push('Kiểm tra thẻ noindex hoặc Xóa bỏ nếu không cần');
+            actions.push('Bỏ chặn noindex hoặc Xóa bỏ');
         }
 
         return `
-            <tr class="border-b hover:bg-gray-50">
+            <tr class="border-b hover:bg-gray-50 transition-colors">
                 <td class="p-3 text-xs text-gray-400 font-bold">${i+1}</td>
                 <td class="p-3 text-xs">
                     <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block mb-1 break-all">${u.URL}</a>
                     <div class="text-[10px] text-gray-500">${u.TieuDe}</div>
                 </td>
-                <td class="p-3">${reasons.join(' ')}</td>
-                <td class="p-3 text-[11px] text-purple-700 font-medium"><i class="fas fa-tools mr-1"></i>${actions.join(' <br> <i class="fas fa-tools mr-1"></i>')}</td>
+                <td class="p-3 leading-relaxed">${reasons.join(' ')}</td>
+                <td class="p-3 text-[11px] text-purple-700 font-medium"><i class="fas fa-tools mr-1"></i>${actions.join(' <br> <i class="fas fa-tools mr-1 mt-1"></i>')}</td>
             </tr>
         `;
     }).join('');
 
     container.innerHTML = `
-        <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white flex justify-between items-center cursor-pointer" onclick="document.getElementById('zombieTableArea').classList.toggle('hidden')">
-            <h2 class="text-lg font-black text-purple-800"><i class="fas fa-spider text-purple-500 mr-2"></i>Trạm Quét Zombie Pages <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${zombies.length} URL</span></h2>
+        <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('zombieTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-purple-800"><i class="fas fa-spider text-purple-500 mr-2 group-hover:text-purple-600 transition-colors"></i>Trạm Quét Zombie Pages <span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${zombies.length} URL Rác</span></h2>
             <button class="bg-purple-600 hover:bg-purple-700 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
         </div>
         <div id="zombieTableArea" class="hidden overflow-x-auto p-4 bg-gray-50">
-            <table class="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table class="w-full text-left bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-bold">
                     <tr>
                         <th class="p-3 w-10">STT</th>
@@ -561,12 +645,11 @@ function renderZombieTool() {
     `;
 }
 
-// HÀM MỚI: XỬ LÝ LỌC & GỌI PHÂN TRANG
 function processFilters() {
-    const mainVal = document.getElementById('mainCatFilter').value;
-    const subVal = document.getElementById('subCatFilter').value;
-    const statusVal = document.getElementById('statusFilter').value;
-    const searchVal = document.getElementById('urlSearch').value.toLowerCase();
+    const mainVal = document.getElementById('mainCatFilter') ? document.getElementById('mainCatFilter').value : '';
+    const subVal = document.getElementById('subCatFilter') ? document.getElementById('subCatFilter').value : '';
+    const statusVal = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : '';
+    const searchVal = document.getElementById('urlSearch') ? document.getElementById('urlSearch').value.toLowerCase() : '';
 
     const filtered = globalDetails.filter(item => {
         const mMain = !mainVal || item.DanhMucChinh === mainVal;
@@ -583,7 +666,6 @@ function processFilters() {
         grouped[key].urls.push(item);
     });
 
-    // Cập nhật mảng hiện tại cho phân trang
     currentFilteredGroups = Object.keys(grouped).map(key => grouped[key]);
     
     currentFilteredGroups.sort((a, b) => {
@@ -592,13 +674,12 @@ function processFilters() {
         return totalB - totalA;
     });
 
-    // Gọi hàm render bảng dựa trên biến currentPage
     renderCategoryAccordion();
 }
 
-// RENDER BẢNG THEO SỐ TRANG
 function renderCategoryAccordion() {
     const tbody = document.getElementById('categoryAccordionBody');
+    if(!tbody) return;
     tbody.innerHTML = '';
 
     const totalPages = Math.ceil(currentFilteredGroups.length / ITEMS_PER_PAGE) || 1;
@@ -609,7 +690,7 @@ function renderCategoryAccordion() {
     const groupsToRender = currentFilteredGroups.slice(startIndex, endIndex);
 
     if (groupsToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">Không tìm thấy dữ liệu.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500 font-bold">Không tìm thấy dữ liệu phù hợp với bộ lọc.</td></tr>`;
         renderPaginationControls(totalPages);
         return;
     }
@@ -619,20 +700,20 @@ function renderCategoryAccordion() {
         const rowId = 'cat-row-' + (startIndex + index);
 
         tbody.insertAdjacentHTML('beforeend', `
-            <tr class="border-b hover:bg-orange-50 cursor-pointer" onclick="toggleAccordion('${rowId}')">
-                <td class="p-4 font-bold text-sm"><i class="fas fa-folder text-orange-400 mr-2"></i>${g.main}</td>
-                <td class="p-4 text-xs text-gray-500 font-bold">${g.sub}</td>
+            <tr class="border-b hover:bg-orange-50 cursor-pointer transition-colors" onclick="toggleAccordion('${rowId}')">
+                <td class="p-4 font-bold text-sm text-gray-800"><i class="fas fa-folder text-orange-400 mr-2"></i>${g.main || 'Khác'}</td>
+                <td class="p-4 text-xs text-gray-500 font-bold">${g.sub || 'Chung'}</td>
                 <td class="p-4 text-center font-black text-orange-600">${g.urls.length}</td>
                 <td class="p-4 text-center text-gray-400 text-xs">${((g.urls.length / globalDetails.length)*100).toFixed(1)}%</td>
                 <td class="p-4 text-center text-gray-500 text-xs font-bold">---</td>
-                <td class="p-4 text-center"><button class="bg-orange-500 text-white px-3 py-1 rounded text-[10px] font-bold uppercase">Chi tiết <i class="fas fa-chevron-right ml-1 transition-transform" id="icon-${rowId}"></i></button></td>
+                <td class="p-4 text-center"><button class="bg-orange-500 hover:bg-orange-600 transition-colors text-white px-3 py-1 rounded text-[10px] font-bold uppercase shadow-sm">Chi tiết <i class="fas fa-chevron-right ml-1 transition-transform" id="icon-${rowId}"></i></button></td>
             </tr>
-            <tr id="${rowId}" class="hidden bg-gray-50/30 border-b-2 border-orange-100">
+            <tr id="${rowId}" class="hidden bg-gray-50/50 border-b-2 border-orange-100">
                 <td colspan="6" class="p-4">
-                    <div class="max-h-120 overflow-y-auto rounded-lg border bg-white shadow-inner">
+                    <div class="max-h-[500px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-inner custom-scrollbar">
                         <table class="w-full text-left">
-                            <thead class="bg-gray-100 text-[10px] text-gray-400 uppercase sticky top-0 z-10">
-                                <tr><th class="p-3 w-10">STT</th><th class="p-3">Phân tích URL, Điểm SEO & GSC</th><th class="p-3 text-center w-24">Trạng thái</th><th class="p-3 text-center w-24">Traffic</th><th class="p-3 text-center w-24">Xu hướng</th></tr>
+                            <thead class="bg-gray-100/80 text-[10px] text-gray-500 uppercase font-bold sticky top-0 z-10 backdrop-blur-sm">
+                                <tr><th class="p-3 w-10 text-center">STT</th><th class="p-3">Phân tích URL, Điểm SEO & GSC</th><th class="p-3 text-center w-24">Trạng thái</th><th class="p-3 text-center w-24">Traffic</th><th class="p-3 text-center w-24">Xu hướng</th></tr>
                             </thead>
                             <tbody>
                                 ${g.urls.map((u, i) => {
@@ -655,12 +736,12 @@ function renderCategoryAccordion() {
                                     
                                     return `
                                         <tr class="border-b hover:bg-blue-50/30 transition-colors">
-                                            <td class="p-3 text-xs text-gray-300 font-bold">${i+1}</td>
+                                            <td class="p-3 text-xs text-gray-400 font-bold text-center">${i+1}</td>
                                             <td class="p-3">
                                                 <div class="flex items-center gap-2 mb-2">
-                                                    <span class="${scoreColor} text-white font-black text-[9px] px-2 py-0.5 rounded" title="Điểm SEO Onpage">Điểm SEO: ${seoScore}</span>
-                                                    ${convCount > 0 ? `<span class="bg-yellow-100 text-yellow-800 font-black text-[9px] px-2 py-0.5 rounded border border-yellow-300"><i class="fas fa-coins mr-1"></i>Ra đơn</span>` : ''}
-                                                    <a href="${u.URL}" target="_blank" class="text-blue-500 text-[11px] font-bold hover:underline">${u.URL}</a>
+                                                    <span class="${scoreColor} text-white font-black text-[9px] px-2 py-0.5 rounded shadow-sm" title="Điểm SEO Onpage">Điểm SEO: ${seoScore}</span>
+                                                    ${convCount > 0 ? `<span class="bg-yellow-100 text-yellow-800 font-black text-[9px] px-2 py-0.5 rounded border border-yellow-300 shadow-sm"><i class="fas fa-coins mr-1"></i>Ra đơn</span>` : ''}
+                                                    <a href="${u.URL}" target="_blank" class="text-blue-600 text-[11px] font-bold hover:underline truncate max-w-[400px] block" title="${u.URL}">${u.URL}</a>
                                                 </div>
                                                 
                                                 <div class="grid grid-cols-3 gap-3 p-2 bg-gray-50 rounded text-[9px] border border-gray-100 shadow-sm">
@@ -686,7 +767,7 @@ function renderCategoryAccordion() {
                                                 </div>
                                                 
                                             </td>
-                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-100 text-blue-700">${u.TrangThai}</span></td>
+                                            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-blue-100 text-blue-700 whitespace-nowrap">${u.TrangThai}</span></td>
                                             <td class="p-3 text-center font-bold text-xs">${parseInt(u.TrafficCurrent).toLocaleString('vi-VN')}</td>
                                             <td class="p-3 text-center text-[10px] font-bold ${diff > 0 ? 'text-green-600' : 'text-red-600'}">${diff > 0 ? '+' + diff.toLocaleString('vi-VN') : diff.toLocaleString('vi-VN')}</td>
                                         </tr>`;
@@ -701,7 +782,6 @@ function renderCategoryAccordion() {
     renderPaginationControls(totalPages);
 }
 
-// HÀM VẼ NÚT BẤM CHUYỂN TRANG
 function renderPaginationControls(totalPages) {
     let paginationContainer = document.getElementById('paginationControls');
     if (!paginationContainer) return;
@@ -719,7 +799,7 @@ function renderPaginationControls(totalPages) {
     for (let i = 1; i <= totalPages; i++) {
         if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
             if (i === currentPage) {
-                buttons += `<button class="px-4 py-2 rounded-lg bg-orange-500 text-white font-bold shadow-md text-sm">${i}</button>`;
+                buttons += `<button class="px-4 py-2 rounded-lg bg-orange-500 text-white font-bold shadow-md text-sm cursor-default">${i}</button>`;
             } else {
                 buttons += `<button onclick="changePage(${i})" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors text-sm font-semibold">${i}</button>`;
             }
@@ -734,18 +814,22 @@ function renderPaginationControls(totalPages) {
     paginationContainer.innerHTML = buttons;
 }
 
-// HÀM LẮNG NGHE KHI BẤM CHUYỂN TRANG
 function changePage(page) {
     currentPage = page;
     renderCategoryAccordion();
-    document.getElementById('categoryAccordionBody').closest('.bg-white').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    let containerWrap = document.getElementById('categoryAccordionBody').closest('.bg-white');
+    if(containerWrap) {
+        containerWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function toggleAccordion(id) {
     const r = document.getElementById(id);
     const i = document.getElementById('icon-' + id);
+    if (!r || !i) return;
     if(r.classList.contains('hidden')) { r.classList.remove('hidden'); i.style.transform = 'rotate(90deg)'; }
     else { r.classList.add('hidden'); i.style.transform = 'rotate(0deg)'; }
 }
 
+// KHỞI CHẠY HỆ THỐNG
 loadData();
