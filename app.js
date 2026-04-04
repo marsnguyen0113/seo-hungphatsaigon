@@ -109,13 +109,14 @@ async function loadData() {
         document.getElementById('outdatedContent').textContent = (parseInt(tq.canCapNhat)||0) + (parseInt(tq.loiThoi)||0);
         document.getElementById('recommendUpdate').textContent = tq.loiThoi || '0';
 
-        renderAllCharts(parseInt(tq.tongUrl));
+renderAllCharts(parseInt(tq.tongUrl));
         renderTop10Priority();
         renderRankTracking(); 
         renderCannibalizationTool(); 
         renderMoneyPagesTool(); 
         renderContentDecayTool(); 
         renderZombieTool(); 
+        renderCTROptimizerTool(); 
         
         initFilters();
         processFilters(); 
@@ -416,7 +417,102 @@ function renderCannibalizationTool() {
         </div>
     `;
 }
+// ==========================================
+// TRẠM 1: TỐI ƯU CTR (MỎ VÀNG TRAFFIC)
+// ==========================================
+function renderCTROptimizerTool() {
+    let container = document.getElementById('ctrOptimizerContainer');
+    if (!container) {
+        // Tìm vị trí để chèn widget này vào (ngay trên bảng Danh mục chính)
+        const wrapper = document.getElementById('categoryAccordionBody').closest('.bg-white');
+        container = document.createElement('div');
+        container.id = 'ctrOptimizerContainer';
+        container.className = 'mb-6 bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden';
+        wrapper.parentNode.insertBefore(container, wrapper);
+    }
 
+    // THUẬT TOÁN LỌC: Lấy các trang Top 10, Hiển thị > 50, nhưng CTR < 3%
+    let ctrPages = globalDetails.filter(u => {
+        let pos = parseFloat(u.GSCPos) || 100;
+        let imp = parseInt(u.GSCImp) || 0;
+        
+        // Xử lý chuỗi % để lấy số thực
+        let ctrStr = String(u.GSCCTR).replace('%', '').replace(',', '.');
+        let ctr = parseFloat(ctrStr) || 0;
+
+        return (pos > 0 && pos <= 10) && (imp >= 50) && (ctr < 3.0);
+    });
+
+    // Sắp xếp ưu tiên: Trang nào có lượng Hiển thị (Impression) cao nhất thì ưu tiên sửa trước
+    ctrPages.sort((a, b) => (parseInt(b.GSCImp) || 0) - (parseInt(a.GSCImp) || 0));
+    
+    // Giới hạn hiển thị Top 20 cơ hội ngon ăn nhất
+    ctrPages = ctrPages.slice(0, 20);
+
+    if (ctrPages.length === 0) {
+        container.innerHTML = `<div class="px-6 py-4 bg-green-50 text-green-700 font-bold"><i class="fas fa-check-circle mr-2"></i>Tuyệt vời! Các trang lọt Top 10 của bạn đều có tỷ lệ Click (CTR) trên mức trung bình.</div>`;
+        return;
+    }
+
+    let rows = ctrPages.map((u, i) => {
+        let pos = parseFloat(u.GSCPos).toFixed(1);
+        let imp = parseInt(u.GSCImp).toLocaleString('vi-VN');
+        let clicks = parseInt(u.GSCClicks).toLocaleString('vi-VN');
+        
+        // Gắn cảnh báo nếu Title quá ngắn hoặc quá dài
+        let titleLenInfo = u.TitleLen > 60 ? `<span class="text-red-500 font-bold" title="Tiêu đề quá dài (>60 ký tự) sẽ bị Google cắt mất">(${u.TitleLen} ký tự - Dài)</span>` : 
+                          (u.TitleLen < 30 ? `<span class="text-orange-500 font-bold" title="Tiêu đề quá ngắn (<30 ký tự), lãng phí không gian">(${u.TitleLen} ký tự - Ngắn)</span>` : 
+                          `<span class="text-green-600">(${u.TitleLen} ký tự)</span>`);
+
+        return `
+            <tr class="border-b hover:bg-blue-50 transition-colors">
+                <td class="p-3 text-xs text-blue-600 font-black">${i+1}</td>
+                <td class="p-3 text-xs">
+                    <a href="${u.URL}" target="_blank" class="text-blue-600 font-bold hover:underline block break-all mb-1">${u.URL}</a>
+                    <div class="text-[11px] text-gray-700 font-medium">Tiêu đề hiện tại: ${u.TitleTech} ${titleLenInfo}</div>
+                </td>
+                <td class="p-3 text-center text-green-600 font-black">Top ${pos}</td>
+                <td class="p-3 text-center font-bold text-gray-700">${imp}</td>
+                <td class="p-3 text-center font-bold text-gray-500">${clicks}</td>
+                <td class="p-3 text-center">
+                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-black shadow-sm text-[10px]">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>${u.GSCCTR}
+                    </span>
+                </td>
+                <td class="p-3 text-[10px] text-center">
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded shadow-sm w-full font-bold transition-colors">Yêu cầu Re-write</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="px-6 py-4 border-b border-blue-200 bg-gradient-to-r from-blue-100 to-white flex justify-between items-center cursor-pointer group" onclick="document.getElementById('ctrTableArea').classList.toggle('hidden')">
+            <h2 class="text-lg font-black text-blue-800"><i class="fas fa-magnet text-blue-600 mr-2 group-hover:scale-110 transition-transform"></i>Trạm Tối Ưu CTR (Mỏ Vàng Traffic) <span class="bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs ml-2">${ctrPages.length} Cơ hội</span></h2>
+            <button class="bg-blue-500 hover:bg-blue-600 transition-colors text-white px-3 py-1 rounded text-xs font-bold uppercase shadow-sm">Xem chi tiết <i class="fas fa-chevron-down ml-1"></i></button>
+        </div>
+        <div id="ctrTableArea" class="hidden overflow-x-auto p-4 bg-blue-50/30">
+            <div class="text-xs text-gray-600 mb-3 p-3 bg-white border border-blue-100 rounded shadow-sm leading-relaxed">
+                <i class="fas fa-info-circle text-blue-500 mr-1"></i> <b>Insight Hành Động:</b> Đây là các URL đã lọt <b>Top 10 Google</b> và có nhiều lượt hiển thị, nhưng tỷ lệ khách hàng click vào rất thấp (< 3%). <br>
+                👉 <b>Nhiệm vụ:</b> Team Content chỉ cần viết lại <b>Thẻ Tiêu Đề (Meta Title)</b> thêm các từ ngữ kích thích (như: Bảng giá, Cập nhật mới nhất, Ưu đãi, Top...) để giật tít, kéo Traffic về ngay lập tức mà không cần viết lại toàn bộ nội dung bài.
+            </div>
+            <table class="w-full text-left bg-white border border-blue-200 rounded-lg overflow-hidden shadow-sm">
+                <thead class="bg-blue-100/50 text-[10px] text-blue-800 uppercase font-black">
+                    <tr>
+                        <th class="p-3 w-10">STT</th>
+                        <th class="p-3">Trang Đích & Tiêu đề hiện tại</th>
+                        <th class="p-3 text-center w-20">Vị trí</th>
+                        <th class="p-3 text-center w-24">Hiển thị (Imp)</th>
+                        <th class="p-3 text-center w-20">Clicks</th>
+                        <th class="p-3 text-center w-24">CTR Báo động</th>
+                        <th class="p-3 text-center w-24">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
 function renderMoneyPagesTool() {
     let container = document.getElementById('moneyPagesContainer');
     if (!container) {
